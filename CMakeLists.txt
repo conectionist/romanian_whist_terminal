@@ -19,7 +19,7 @@ add_executable(whist_terminal
     src/TerminalRomanianWhist.cpp
 )
 
-target_compile_features(whist_terminal PRIVATE cxx_std_17)
+target_compile_features(whist_terminal PRIVATE cxx_std_20)
 
 # Engine include directories arrive transitively through the PUBLIC
 # target_include_directories on RomanianWhist::engine.

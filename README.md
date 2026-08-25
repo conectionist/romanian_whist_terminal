@@ -16,7 +16,7 @@ contains only the terminal interface:
 
 ## Requirements
 
-- A C++17 compiler
+- A C++20 compiler
 - CMake 3.14 or newer
 
 ## Getting the source
