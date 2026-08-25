@@ -43,9 +43,8 @@ public:
     // Between one player's card and the next.
     void beat();
 
-    // After a trick is decided. With a human at the table this waits for Enter;
-    // watching bots it dwells instead, since a full game is over a hundred
-    // tricks and asking for a keypress at each is not watching, it is typing.
+    // After a trick is decided. Waits for Enter, same as roundPause - --auto
+    // (or --no-animate, which implies it) dwells instead.
     void trickPause();
 
     // After a round is scored. Waits whenever there is anyone to wait for -
