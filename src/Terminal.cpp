@@ -1,6 +1,7 @@
 #include "Terminal.h"
 
 #include <algorithm>
+#include <csignal>
 #include <cstdio>
 #include <cstdlib>
 
@@ -35,6 +36,27 @@ const char* colorCode(Terminal::Color color)
     return "";
 }
 
+// Ctrl-C kills the process outright, so ~Terminal never runs and the shell is
+// left on the alternate screen with an invisible cursor. Put the terminal back
+// first, then die the way an uncaught SIGINT would.
+//
+// Only async-signal-safe calls belong here: write(2) and _exit(2), no
+// iostreams, no allocation. It runs whether or not the alternate screen was
+// entered, since the sequences are harmless when it was not.
+extern "C" void restoreTerminalOnInterrupt(int)
+{
+    const char restore[] = "\x1b[?25h\x1b[0m\x1b[?1049l";
+
+#ifdef _WIN32
+    _write(_fileno(stdout), restore, sizeof(restore) - 1);
+    _exit(130);
+#else
+    const ssize_t written = write(STDOUT_FILENO, restore, sizeof(restore) - 1);
+    (void)written;
+    _exit(130);
+#endif
+}
+
 // Without this a Windows console prints the escape sequences literally. Called
 // once; a failure means the caller must fall back to plain output.
 bool enableWindowsVirtualTerminal()
@@ -63,9 +85,14 @@ bool enableWindowsVirtualTerminal()
 Terminal::Terminal(AppOptions& _options) : options(_options),
                                            altScreenActive(false)
 {
-    // A console that cannot process escape sequences must not be sent any. This
-    // is only reachable on Windows; elsewhere it always succeeds.
-    if((options.color || options.screenControl) && !enableWindowsVirtualTerminal())
+    // A console that cannot process escape sequences must not be sent any, and
+    // one still on its default code page cannot print the suit glyphs. This is
+    // only reachable on Windows; elsewhere it always succeeds.
+    //
+    // Called unconditionally: it is also what selects the UTF-8 code page, so
+    // skipping it when colour and screen control are both off would leave the
+    // glyphs to come out as mojibake.
+    if(!enableWindowsVirtualTerminal())
     {
         options.color = false;
         options.unicode = false;
@@ -73,11 +100,17 @@ Terminal::Terminal(AppOptions& _options) : options(_options),
         options.altScreen = false;
     }
 
+    if(options.screenControl)
+        std::signal(SIGINT, restoreTerminalOnInterrupt);
+
     enterAltScreen();
 }
 
 Terminal::~Terminal()
 {
+    if(options.screenControl)
+        std::signal(SIGINT, SIG_DFL);
+
     leaveAltScreen();
 
     if(options.screenControl)

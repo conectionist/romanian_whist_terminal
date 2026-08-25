@@ -58,8 +58,21 @@ GameConfig SetupWizard::run() const
     {
         GameConfig config;
         config.humanName = askName("What should we call you?", {});
-        config.aiNames = { BotNames[0], BotNames[1], BotNames[2] };
-        config.aiLevels = { 0, 0, 0 };
+
+        // Skip any stock name the player has just taken for themselves: sharing
+        // a name with a bot would mean sharing its bets and its score.
+        for(const std::string& name : BotNames)
+        {
+            if(config.aiNames.size() == 3)
+                break;
+
+            if(!Input::equalIgnoringCase(name, config.humanName))
+            {
+                config.aiNames.push_back(name);
+                config.aiLevels.push_back(0);
+            }
+        }
+
         return config;
     }
 

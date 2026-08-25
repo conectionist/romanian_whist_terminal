@@ -34,6 +34,11 @@ std::string readName(unsigned int maxLength,
 // Waits for Enter. Returns immediately if stdin is not interactive.
 void waitForEnter(bool interactive);
 
+// Names are compared this way wherever uniqueness matters, because the engine
+// keys bets and results by name and two seats differing only in case would
+// still be two seats.
+bool equalIgnoringCase(const std::string& left, const std::string& right);
+
 } // namespace Input
 
 #endif

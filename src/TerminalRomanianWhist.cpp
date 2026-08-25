@@ -1,5 +1,7 @@
 #include "TerminalRomanianWhist.h"
 
+#include <stdexcept>
+
 
 #include <romanian_whist/Trick.h>
 #include <romanian_whist/Player.h>
@@ -187,6 +189,13 @@ void TerminalRomanianWhist::playCurrentRoundTricks()
             Card* trump = game.getCurrentTrumpCard();
             const Suit* leadSuit = trick.hasLeadSuit() ? &trick.getLeadSuit() : nullptr;
             Card* playedCard = currentPlayer->playCard(trump, leadSuit);
+
+            // Contractually possible: a move provider returns nullptr when it
+            // has no legal play. It should not be reachable, since a player
+            // holding cards always has at least one legal one - so say so
+            // loudly rather than dereferencing null or playing on regardless.
+            if(playedCard == nullptr)
+                throw std::runtime_error(currentPlayer->getName() + " had no legal card to play.");
 
             if(!trick.hasLeadSuit())
                 trick.setLeadSuit(playedCard->suit);

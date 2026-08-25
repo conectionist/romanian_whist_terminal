@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cerrno>
 #include <cstdlib>
 #include <cstring>
 #include <string>
@@ -64,6 +65,8 @@ bool localeSupportsUnicode()
 #endif
 }
 
+constexpr long MaximumDelayMilliseconds = 10000;
+
 // Returns false if the argument is not "--flag=<non-negative integer>".
 bool parseDelayFlag(const char* argument, const char* prefix, long& valueOut)
 {
@@ -75,13 +78,18 @@ bool parseDelayFlag(const char* argument, const char* prefix, long& valueOut)
     if(*text == '\0')
         return false;
 
+    errno = 0;
+
     char* end = nullptr;
     const long parsed = std::strtol(text, &end, 10);
 
-    if(end == text || *end != '\0' || parsed < 0)
+    if(end == text || *end != '\0' || parsed < 0 || errno == ERANGE)
         return false;
 
-    valueOut = parsed;
+    // Anything past a few seconds a card is indistinguishable from a hang, and
+    // the cap keeps the doubling for the trick dwell - and the conversion to
+    // poll's int timeout - well clear of overflowing.
+    valueOut = std::min(parsed, MaximumDelayMilliseconds);
     return true;
 }
 

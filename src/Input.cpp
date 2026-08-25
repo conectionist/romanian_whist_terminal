@@ -21,6 +21,18 @@ void failOnEndOfInput()
         throw std::runtime_error("Input closed while awaiting a choice.");
 }
 
+// A preceding formatted read leaves its newline in the buffer; a getline that
+// followed would return an empty line for it.
+//
+// Test in_avail() before peeking: peek() blocks when nothing is buffered, so on
+// an empty buffer it would swallow the keypress the caller is waiting for and
+// then go on waiting for a second one.
+void discardPendingNewline()
+{
+    if(std::cin.rdbuf()->in_avail() > 0 && std::cin.peek() == '\n')
+        std::cin.ignore();
+}
+
 std::string trim(const std::string& text)
 {
     const auto notSpace = [](unsigned char c) { return std::isspace(c) == 0; };
@@ -31,7 +43,9 @@ std::string trim(const std::string& text)
     return begin < end ? std::string(begin, end) : std::string();
 }
 
-bool equalIgnoringCase(const std::string& left, const std::string& right)
+} // namespace
+
+bool Input::equalIgnoringCase(const std::string& left, const std::string& right)
 {
     return left.size() == right.size() &&
            std::equal(left.begin(), left.end(), right.begin(),
@@ -40,8 +54,6 @@ bool equalIgnoringCase(const std::string& left, const std::string& right)
                           return std::tolower(a) == std::tolower(b);
                       });
 }
-
-} // namespace
 
 int Input::readChoice(int lowest, int highest, const Redraw& redraw)
 {
@@ -76,10 +88,7 @@ std::string Input::readLine(const Redraw& redraw)
 
     while(true)
     {
-        // A preceding formatted read leaves its newline behind; skip it rather
-        // than returning an empty line for it.
-        if(std::cin.peek() == '\n')
-            std::cin.ignore();
+        discardPendingNewline();
 
         if(!std::getline(std::cin, line))
         {
@@ -115,7 +124,7 @@ std::string Input::readName(unsigned int maxLength,
         // Bets and results are stored per name, so two players sharing one would
         // share a score. Reject rather than silently corrupt the round.
         const bool duplicate = std::any_of(taken.begin(), taken.end(),
-            [&name](const std::string& other) { return equalIgnoringCase(other, name); });
+            [&name](const std::string& other) { return Input::equalIgnoringCase(other, name); });
 
         if(duplicate)
         {
@@ -132,8 +141,7 @@ void Input::waitForEnter(bool interactive)
     if(!interactive)
         return;
 
-    if(std::cin.peek() == '\n')
-        std::cin.ignore();
+    discardPendingNewline();
 
     std::string discarded;
     if(!std::getline(std::cin, discarded))
