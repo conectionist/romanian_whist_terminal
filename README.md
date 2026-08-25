@@ -1,7 +1,7 @@
 # Romanian Whist — Terminal Client
 
 A terminal UI for [Romanian Whist](https://en.wikipedia.org/wiki/Romanian_Whist), built on
-top of the [Romanian Whist engine](https://github.com/conectionist/RomanianWhist).
+top of the [Romanian Whist engine](https://github.com/conectionist/romanian_whist_engine).
 
 All game logic lives in the engine, which is pulled in as a git submodule. This repo
 contains only the terminal interface:
