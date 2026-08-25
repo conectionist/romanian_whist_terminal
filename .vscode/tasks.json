@@ -18,12 +18,12 @@
             "dependsOn": "CMake: configure",
             "problemMatcher": ["$gcc"],
             "group": { "kind": "build", "isDefault": true },
-            "detail": "Build the whist_terminal executable."
+            "detail": "Build the terminal_romanian_whist executable."
         },
         {
             "type": "shell",
             "label": "run",
-            "command": "${workspaceFolder}/build/whist_terminal",
+            "command": "${workspaceFolder}/build/terminal_romanian_whist",
             "group": "test",
             "dependsOn": "CMake: build",
             "presentation": { "echo": true, "reveal": "always", "focus": true, "panel": "shared" }

@@ -1,0 +1,7 @@
+#pragma once
+
+namespace whist_terminal {
+
+inline constexpr const char* VersionString = "@PROJECT_VERSION@";
+
+} // namespace whist_terminal

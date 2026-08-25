@@ -2,10 +2,10 @@
     "version": "0.2.1",
     "configurations": [
         {
-            "name": "Build and debug whist_terminal",
+            "name": "Build and debug terminal_romanian_whist",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/whist_terminal",
+            "program": "${workspaceFolder}/build/terminal_romanian_whist",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

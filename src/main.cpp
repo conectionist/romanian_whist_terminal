@@ -1,10 +1,25 @@
+#include <cstring>
 #include <iostream>
 #include <stdexcept>
 
-#include "TerminalRomanianWhist.h"
+#include <romanian_whist/Version.h>
 
-int main()
+#include "TerminalRomanianWhist.h"
+#include "Version.h"
+
+int main(int argc, char** argv)
 {
+    for (int i = 1; i < argc; ++i)
+    {
+        if (std::strcmp(argv[i], "--version") == 0 || std::strcmp(argv[i], "-v") == 0)
+        {
+            std::cout << "terminal_romanian_whist " << whist_terminal::VersionString
+                       << " (romanian_whist engine " << romanian_whist::VersionString << ")"
+                       << std::endl;
+            return 0;
+        }
+    }
+
     TerminalRomanianWhist whist;
 
     try

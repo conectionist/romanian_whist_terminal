@@ -43,14 +43,17 @@ cmake --preset default
 cmake --build build
 ```
 
-The executable is written to `build/whist_terminal`. For an optimised build use
-`--preset release` (output goes to `build-release/`).
+The executable is written to `build/terminal_romanian_whist-<version>` (an unversioned
+`build/terminal_romanian_whist` copy is also created for convenience). For an optimised
+build use `--preset release` (output goes to `build-release/`).
 
 ## Running
 
 ```bash
-./build/whist_terminal
+./build/terminal_romanian_whist
 ```
+
+Pass `--version` to print the app version and the linked engine version.
 
 ## Updating the engine
 
@@ -81,6 +84,6 @@ playing the rest of the hand automatically.
 ## VSCode
 
 Build with <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>B</kbd>, or use the **run** task to build
-and launch. Debugging uses the "Build and debug whist_terminal" launch configuration.
+and launch. Debugging uses the "Build and debug terminal_romanian_whist" launch configuration.
 IntelliSense reads `build/compile_commands.json`, so configure once before expecting
 completions to resolve.
