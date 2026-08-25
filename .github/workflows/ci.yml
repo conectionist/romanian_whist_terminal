@@ -9,18 +9,9 @@ on:
       - '**/*.md'
 
 jobs:
-  build:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            platform: linux
-          - os: windows-latest
-            platform: windows
-          - os: macos-latest
-            platform: macos
-    runs-on: ${{ matrix.os }}
+  build-linux:
+    name: Build (Linux)
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
         with:
@@ -42,11 +33,65 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
-          name: terminal_romanian_whist-${{ steps.version.outputs.version }}-${{ matrix.platform }}
+          name: terminal_romanian_whist-${{ steps.version.outputs.version }}-linux
+          path: build-release/terminal_romanian_whist-*
+
+  build-windows:
+    name: Build (Windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Configure
+        run: cmake --preset release
+
+      - name: Get project version
+        id: version
+        shell: bash
+        run: |
+          version=$(grep -m1 '^CMAKE_PROJECT_VERSION:' build-release/CMakeCache.txt | cut -d= -f2)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Build
+        run: cmake --build --preset release
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: terminal_romanian_whist-${{ steps.version.outputs.version }}-windows
+          path: build-release/terminal_romanian_whist-*
+
+  build-macos:
+    name: Build (macOS)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Configure
+        run: cmake --preset release
+
+      - name: Get project version
+        id: version
+        shell: bash
+        run: |
+          version=$(grep -m1 '^CMAKE_PROJECT_VERSION:' build-release/CMakeCache.txt | cut -d= -f2)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Build
+        run: cmake --build --preset release
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: terminal_romanian_whist-${{ steps.version.outputs.version }}-macos
           path: build-release/terminal_romanian_whist-*
 
   release:
-    needs: build
+    needs: [build-linux, build-windows, build-macos]
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     permissions:
