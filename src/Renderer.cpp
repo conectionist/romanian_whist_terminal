@@ -90,6 +90,17 @@ std::string Renderer::roundTypeLabel(RoundType type) const
     return "Normal";
 }
 
+void Renderer::appendTrimmed(std::string& out, const std::string& line) const
+{
+    // Cells are padded to align the next column, which leaves the last one on a
+    // row padded against nothing. Harmless on screen, but it shows up as stray
+    // whitespace when the output is redirected to a file.
+    const std::size_t end = line.find_last_not_of(' ');
+
+    out += end == std::string::npos ? std::string() : line.substr(0, end + 1);
+    terminal.endLine(out);
+}
+
 void Renderer::appendBlank(std::string& out) const
 {
     if(compact())
@@ -197,9 +208,10 @@ void Renderer::appendSeatTable(std::string& out, const GameView& view) const
             else if(seat.lossStreak > 0)
                 streak = "L" + std::to_string(seat.lossStreak);
 
-            // Last column, so no padding: trailing spaces would only show up as
-            // stray whitespace in redirected output.
-            row += std::string(GapWidth, ' ') + streak;
+            // Last column, so neither padded nor written when empty: trailing
+            // spaces would only show up as stray whitespace in redirected output.
+            if(!streak.empty())
+                row += std::string(GapWidth, ' ') + streak;
         }
 
         // Colour repeats what the markers already say, so a colourless terminal
@@ -211,6 +223,113 @@ void Renderer::appendSeatTable(std::string& out, const GameView& view) const
         else
             out += row;
 
+        terminal.endLine(out);
+    }
+}
+
+void Renderer::appendTrick(std::string& out, const GameView& view) const
+{
+    std::string rightCaption;
+    if(view.hasLeadSuit)
+        rightCaption = "lead " + cardFormat.suitGlyph(view.leadSuit);
+
+    appendRule(out,
+               "TRICK " + std::to_string(view.trickNumber) + " of " + std::to_string(view.trickCount),
+               rightCaption);
+    appendBlank(out);
+
+    // Seats appear in the order they played, so the table reads the way it was
+    // dealt out rather than by seat number.
+    for(const PlayedCardView& played : view.table)
+    {
+        const SeatView& seat = view.seats[played.seatIndex];
+
+        std::string row = std::string(IndentWidth + MarkerWidth + 2, ' ') +
+                          pad(seat.name, NameWidth) +
+                          pad(cardFormat.card(played.card), 6);
+
+        if(played.isWinning)
+            row += terminal.paint(view.table.size() == view.seats.size() ? "wins" : "winning",
+                                  Terminal::Color::Green, true);
+
+        appendTrimmed(out, row);
+    }
+
+    // A placeholder for whoever is on turn keeps the panel from jumping about
+    // as cards land in it.
+    if(view.activeSeat >= 0 && view.table.size() < view.seats.size())
+    {
+        const SeatView& seat = view.seats[static_cast<std::size_t>(view.activeSeat)];
+
+        std::string row = std::string(IndentWidth, ' ') +
+                          pad(">", MarkerWidth) + "  " +
+                          pad(seat.name, NameWidth) +
+                          terminal.dim("--");
+
+        out += terminal.paint(row, Terminal::Color::Green, true);
+        terminal.endLine(out);
+    }
+}
+
+void Renderer::appendHand(std::string& out, const GameView& view) const
+{
+    if(view.hand.empty())
+        return;
+
+    std::string rightCaption;
+    if(!view.hint.empty())
+        rightCaption = view.hint;
+    else
+        rightCaption = std::to_string(view.hand.size()) +
+                       (view.hand.size() == 1 ? " card" : " cards");
+
+    appendRule(out, "YOUR HAND", rightCaption);
+    appendBlank(out);
+
+    // One list, one numbering. Printing the hand and the legal plays as two
+    // separate lists made the player match up two sets of numbers; here an
+    // unplayable card keeps its place in the grid but has no number to type.
+    bool anyIllegal = false;
+    std::size_t index = 0;
+
+    while(index < view.hand.size())
+    {
+        const romanian_whist::Suit suit = view.hand[index].card.suit;
+
+        std::string row = std::string(IndentWidth + 2, ' ');
+        row += terminal.paint(cardFormat.suitGlyph(suit),
+                              CardFormat::isRed(suit) ? Terminal::Color::Red : Terminal::Color::Default,
+                              true);
+        row += "  ";
+
+        while(index < view.hand.size() && view.hand[index].card.suit == suit)
+        {
+            const HandEntry& entry = view.hand[index];
+
+            std::string cell;
+            if(entry.choice > 0)
+                cell = terminal.paint("[" + std::to_string(entry.choice) + "]",
+                                      Terminal::Color::Cyan, true) +
+                       " " + cardFormat.card(entry.card);
+            else if(entry.legal)
+                cell = "    " + cardFormat.card(entry.card);
+            else
+            {
+                anyIllegal = true;
+                cell = terminal.dim(" .  ") + cardFormat.dimCard(entry.card);
+            }
+
+            row += pad(cell, 10);
+            index++;
+        }
+
+        appendTrimmed(out, row);
+    }
+
+    // Colour already says this; the legend is for terminals without it.
+    if(anyIllegal && !terminal.colorEnabled())
+    {
+        out += "  " + terminal.dim(". = cannot be played on this trick");
         terminal.endLine(out);
     }
 }
@@ -256,11 +375,24 @@ void Renderer::drawFrame(const GameView& view, std::string_view prompt) const
                    " of " + std::to_string(view.seats.size()));
     else
         appendRule(frame, "SCORE",
-                   "bid " + std::to_string(view.betSum) +
-                   " for " + std::to_string(view.trickCount) + " tricks");
+                   "bid " + std::to_string(view.betSum) + " of " +
+                   std::to_string(view.trickCount) +
+                   (view.trickCount == 1 ? " trick" : " tricks"));
 
     appendBlank(frame);
     appendSeatTable(frame, view);
+
+    if(view.phase == Phase::Playing || view.phase == Phase::TrickEnd)
+    {
+        appendBlank(frame);
+        appendTrick(frame, view);
+    }
+
+    if(!view.hand.empty())
+    {
+        appendBlank(frame);
+        appendHand(frame, view);
+    }
 
     appendFooter(frame, view, prompt);
 

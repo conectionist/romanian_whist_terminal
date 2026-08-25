@@ -18,7 +18,8 @@ using namespace romanian_whist;
 TerminalRomanianWhist::TerminalRomanianWhist(AppOptions& _options) : options(_options),
                                                                      terminal(options),
                                                                      cardFormat(terminal),
-                                                                     renderer(terminal, cardFormat)
+                                                                     renderer(terminal, cardFormat),
+                                                                     ui{options, terminal, renderer, cardFormat, view}
 {}
 
 unsigned int TerminalRomanianWhist::seatOf(PlayerList::const_iterator player) const
@@ -101,7 +102,7 @@ void TerminalRomanianWhist::initialize()
     if(isParticipant)
     {
         // Seated first, so seat 0 is the human whenever there is one.
-        game.addPlayer(playerName, std::make_unique<ConsoleMoveProvider>());
+        game.addPlayer(playerName, std::make_unique<ConsoleMoveProvider>(ui));
         view.humanSeat = 0;
     }
 
@@ -203,58 +204,95 @@ void TerminalRomanianWhist::loop()
 void TerminalRomanianWhist::playCurrentRoundTricks()
 {
     const unsigned int trickCount = game.getCurrentRoundTrickCount();
-    
-    // Track tricks won by each player
-    std::unordered_map<std::string, unsigned int> tricksWon;
-    
-    // Initialize all players with 0 tricks won
-    auto firstPlayer = game.getFirstPlayerOfTheRound();
-    auto currentPlayer = firstPlayer;
-    for(unsigned int i = 0 ; i < game.getPlayerCount() ; i++)
-    {
-        tricksWon[currentPlayer->getName()] = 0;
-        currentPlayer = game.getNextPlayer(currentPlayer);
-    }
+    const unsigned int playerCount = game.getPlayerCount();
+
+    std::vector<unsigned int> tricksWon(playerCount, 0);
 
     for(unsigned int trickIndex = 0 ; trickIndex < trickCount ; trickIndex++)
     {
         Trick trick;
-        currentPlayer = game.getFirstPlayerOfTheRound();
 
-        cout << endl << "Trick " << (trickIndex + 1) << " of " << trickCount << endl;
+        // Whoever leads this trick: the round's opener for the first, then each
+        // trick's winner.
+        const auto leader = game.getFirstPlayerOfTheRound();
+        auto currentPlayer = leader;
 
-        for(unsigned int i = 0 ; i < game.getPlayerCount() ; i++)
+        view.phase = Phase::Playing;
+        view.trickNumber = trickIndex + 1;
+        view.leadSeat = seatOf(leader);
+        view.table.clear();
+        view.hasLeadSuit = false;
+        view.message.clear();
+
+        for(unsigned int i = 0 ; i < playerCount ; i++)
         {
+            view.activeSeat = static_cast<int>(seatOf(currentPlayer));
+
+            const bool isHuman = view.activeSeat == view.humanSeat;
+
+            refreshFromEngine(view, game, openingSeat);
+
+            // The human's own frame is drawn by their move provider, complete
+            // with the prompt; drawing one here first would only flicker.
+            if(!isHuman)
+            {
+                view.hint = currentPlayer->getName() + " is thinking...";
+                renderer.drawFrame(view);
+            }
+
             Card* trump = game.getCurrentTrumpCard();
-            const Suit* leadSuit = trick.getPlayedCards().empty() ? nullptr : &trick.getLeadSuit();
+            const Suit* leadSuit = trick.hasLeadSuit() ? &trick.getLeadSuit() : nullptr;
             Card* playedCard = currentPlayer->playCard(trump, leadSuit);
 
-            if(trick.getPlayedCards().empty())
+            if(!trick.hasLeadSuit())
                 trick.setLeadSuit(playedCard->suit);
 
             trick.addPlayedCard(playedCard);
-            cout << currentPlayer->getName() << " plays " << playedCard->toString() << endl;
+
+            view.hasLeadSuit = true;
+            view.leadSuit = trick.getLeadSuit();
+            view.table.push_back({ static_cast<unsigned int>(view.activeSeat), *playedCard, false });
+
+            markCurrentlyWinning(trick, leader);
+
+            view.hint.clear();
+            refreshFromEngine(view, game, openingSeat);
+            renderer.drawFrame(view);
 
             currentPlayer = game.getNextPlayer(currentPlayer);
         }
 
-        auto winner = game.determineTrickWinner(trick, game.getFirstPlayerOfTheRound());
+        const auto winner = game.determineTrickWinner(trick, leader);
         trick.setWinner(winner);
         game.addTrickToCurrentRound(trick);
         game.setFirstPlayerOfTheRound(winner);
 
-        // Track tricks won
-        tricksWon[winner->getName()]++;
-        
-        cout << winner->getName() << " wins the trick." << endl;
+        const unsigned int winnerSeat = seatOf(winner);
+        tricksWon[winnerSeat]++;
+
+        // Pushed back every trick rather than once at the end of the round, so
+        // the "won" column reads the engine's own numbers as they happen.
+        game.setResult(winner, tricksWon[winnerSeat]);
+
+        view.phase = Phase::TrickEnd;
+        view.activeSeat = -1;
+        view.message = winner->getName() + " wins the trick.";
+        refreshFromEngine(view, game, openingSeat);
+        renderer.drawFrame(view, trickCount > trickIndex + 1 ? "Press Enter for the next trick" : "");
+
+        if(trickCount > trickIndex + 1)
+            Input::waitForEnter(terminal.interactive() && !options.autoAdvance);
     }
-    
-    // Set the results for each player
-    currentPlayer = firstPlayer;
-    for(unsigned int i = 0 ; i < game.getPlayerCount() ; i++)
-    {
-        unsigned int wonTricks = tricksWon[currentPlayer->getName()];
-        game.setResult(currentPlayer, wonTricks);
-        currentPlayer = game.getNextPlayer(currentPlayer);
-    }
+}
+
+void TerminalRomanianWhist::markCurrentlyWinning(const Trick& trick, PlayerList::iterator leader)
+{
+    // Asking the engine rather than reimplementing the ranking here means the
+    // highlight can never disagree with the winner it eventually declares. It
+    // copes with a partly played trick: it ranks whatever has been played.
+    const auto leadingPlayer = game.determineTrickWinner(trick, leader);
+    const unsigned int leadingSeat = seatOf(leadingPlayer);
+
+    for(PlayedCardView& played : view.table)
+        played.isWinning = played.seatIndex == leadingSeat;
 }

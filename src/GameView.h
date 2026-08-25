@@ -55,11 +55,16 @@ struct PlayedCardView
 struct HandEntry
 {
     romanian_whist::Card card{};
+
+    // Whether this card could be played on the current trick. False greys it
+    // out. Every card is "legal" on the bidding screen, where no card is being
+    // chosen at all.
     bool legal = false;
 
-    // The number the player types to choose this card, or 0 when it cannot be
-    // played right now. Numbering runs over displayed order, so what is shown
-    // and what is typed cannot drift apart.
+    // The number the player types to choose this card. Zero means no number is
+    // offered - either the card cannot be played, or nothing is being chosen.
+    // Numbering runs over displayed order, so what is shown and what is typed
+    // cannot drift apart.
     unsigned int choice = 0;
 };
 

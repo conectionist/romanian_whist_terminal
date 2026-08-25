@@ -38,12 +38,15 @@ public:
 private:
     void appendHeader(std::string& out, const GameView& view) const;
     void appendSeatTable(std::string& out, const GameView& view) const;
+    void appendTrick(std::string& out, const GameView& view) const;
+    void appendHand(std::string& out, const GameView& view) const;
     void appendFooter(std::string& out, const GameView& view, std::string_view prompt) const;
 
     void appendRule(std::string& out,
                     std::string_view caption,
                     std::string_view rightCaption = {}) const;
     void appendBlank(std::string& out) const;
+    void appendTrimmed(std::string& out, const std::string& line) const;
 
     // Cells are built as plain text and padded before any colour is applied:
     // padding a painted string counts the escape bytes as columns and the
