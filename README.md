@@ -71,10 +71,12 @@ fixed 4-player AI-only game — useful for testing because it needs no input. Sw
 call to `initialize()` for the interactive setup that prompts for player count, names and
 game structure.
 
-> **Known issue:** `ConsoleMoveProvider` does not check stream state after `std::cin >> choice`.
-> On EOF or non-numeric input the retry loop spins forever, because a failed extraction
-> leaves the offending input in the buffer. Avoid piping input from `/dev/null`, and
-> bound any scripted run with `timeout`.
+### Input handling
+
+`ConsoleMoveProvider` re-prompts on malformed or out-of-range input. End-of-file is
+treated as a request to quit — pressing <kbd>Ctrl</kbd>+<kbd>D</kbd>, or piping input
+that runs out, ends the game with a message and a non-zero exit status rather than
+playing the rest of the hand automatically.
 
 ## VSCode
 
