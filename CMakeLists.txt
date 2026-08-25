@@ -20,6 +20,7 @@ add_executable(terminal_romanian_whist
     src/CardFormat.cpp
     src/Input.cpp
     src/GameView.cpp
+    src/Renderer.cpp
     src/ConsoleMoveProvider.cpp
     src/TerminalRomanianWhist.cpp
 )

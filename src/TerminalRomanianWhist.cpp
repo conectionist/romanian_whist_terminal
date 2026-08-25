@@ -2,23 +2,39 @@
 
 #include <iostream>
 #include <unordered_map>
-#include <iomanip>
-#include <algorithm>
 
 #include <romanian_whist/Trick.h>
 #include <romanian_whist/Player.h>
 #include "ConsoleMoveProvider.h"
+#include "Input.h"
 #include <romanian_whist/AiMoveProvider.h>
 #include <romanian_whist/strategies/FirstCardStrategy.h>
 #include <romanian_whist/strategies/RandomCardStrategy.h>
 
-using std::cin, std::cout, std::endl, std::left, std::setw;
+using std::cin, std::cout, std::endl;
 using std::string, std::vector;
 using namespace romanian_whist;
 
 TerminalRomanianWhist::TerminalRomanianWhist(AppOptions& _options) : options(_options),
-                                                                     terminal(options)
+                                                                     terminal(options),
+                                                                     cardFormat(terminal),
+                                                                     renderer(terminal, cardFormat)
 {}
+
+unsigned int TerminalRomanianWhist::seatOf(PlayerList::const_iterator player) const
+{
+    // By address, not by name: two players may share a name, and list nodes do
+    // not move.
+    const auto& players = game.getPlayers();
+
+    for(unsigned int i = 0 ; i < players.size() ; i++)
+    {
+        if(&players.at(i) == &*player)
+            return i;
+    }
+
+    return 0;
+}
 
 void TerminalRomanianWhist::startGame()
 {
@@ -83,7 +99,11 @@ void TerminalRomanianWhist::initialize()
     cin >> all1GamesAreForehead;
 
     if(isParticipant)
+    {
+        // Seated first, so seat 0 is the human whenever there is one.
         game.addPlayer(playerName, std::make_unique<ConsoleMoveProvider>());
+        view.humanSeat = 0;
+    }
 
     for(int i = 0 ; i < aiCount ; i++)
     {
@@ -128,45 +148,56 @@ void TerminalRomanianWhist::loop()
         game.shuffleDeck();
         game.dealCards();
 
-        cout << "\n=========================\n";
+        openingSeat = seatOf(game.getCurrentRound().getOpeningPlayer());
 
-        cout << "Joc de " << game.getCurrentRoundTrickCount() << endl;
-
-        auto* trump = game.getCurrentTrumpCard();
-        if(trump)
-            cout << "The trump card is " << trump->toString() << endl;
-        else
-            cout << "Game of 8. No trump card!" << endl;
+        view.phase = Phase::Betting;
+        view.message.clear();
+        view.table.clear();
 
         auto currentPlayer = game.getFirstPlayerOfTheRound();
 
         for(unsigned int i = 0 ; i < game.getPlayerCount() ; i++)
         {
-            bool isFirstPlayer = currentPlayer->getName() == game.getFirstPlayerOfTheRound()->getName();
-            unsigned int bet = currentPlayer->getBet(game.getCurrentTrumpCard(), isFirstPlayer);
+            view.activeSeat = static_cast<int>(seatOf(currentPlayer));
+            refreshFromEngine(view, game, openingSeat);
+
+            const unsigned int bet = currentPlayer->getBet(game.getCurrentTrumpCard(), i == 0);
             game.placeBet(currentPlayer, bet);
+
+            currentPlayer = game.getNextPlayer(currentPlayer);
+        }
+
+        // Seed every seat's result. setResult assigns rather than accumulates,
+        // so the per-trick updates that follow keep it live - but a player who
+        // wins nothing would otherwise never be written at all.
+        currentPlayer = game.getFirstPlayerOfTheRound();
+        for(unsigned int i = 0 ; i < game.getPlayerCount() ; i++)
+        {
+            game.setResult(currentPlayer, 0);
             currentPlayer = game.getNextPlayer(currentPlayer);
         }
 
         playCurrentRoundTricks();
-        
-        // Calculate scores (but don't reset yet so we can display round scores)
-        game.calculateScores();
-        displayScoreboard();
-        
-        // Now commit the round scores to total scores
-        game.commitRoundScores();
-        
-        game.completeCurrentRound();
 
-        cout << "\n=========================\n";
+        // Score the round but hold off committing, so the scoreboard can show
+        // what the round was worth alongside the total it folds into.
+        game.calculateScores();
+
+        view.phase = Phase::RoundEnd;
+        view.activeSeat = -1;
+        view.message.clear();
+        refreshFromEngine(view, game, openingSeat);
+        renderer.drawFrame(view, "Press Enter to deal the next round");
+        Input::waitForEnter(terminal.interactive() && !options.autoAdvance);
+
+        game.commitRoundScores();
+        game.completeCurrentRound();
     }
-    
-    // Display final results
-    cout << "\n=========================\n";
-    cout << "GAME OVER" << endl;
-    cout << "=========================\n";
-    displayFinalResults();
+
+    // Off the alternate screen first, so the result is still there after the
+    // program exits.
+    terminal.leaveAltScreen();
+    renderer.drawGameOver(game.getPlayerScores());
 }
 
 void TerminalRomanianWhist::playCurrentRoundTricks()
@@ -227,56 +258,3 @@ void TerminalRomanianWhist::playCurrentRoundTricks()
         currentPlayer = game.getNextPlayer(currentPlayer);
     }
 }
-
-void TerminalRomanianWhist::displayScoreboard()
-{
-    cout << "\n=========================" << endl;
-    cout << "SCOREBOARD" << endl;
-    cout << "=========================" << endl;
-    cout << left << setw(20) << "Player" << setw(15) << "Round Score" << setw(15) << "Total Score" << endl;
-    cout << "--------------------------------------------------------" << endl;
-    
-    auto roundScores = game.getPlayerRoundScores();
-    
-    for(const auto& [name, scores] : roundScores)
-    {
-        cout << left << setw(20) << name 
-             << setw(15) << scores.first 
-             << setw(15) << scores.second << endl;
-    }
-    cout << "=========================" << endl;
-
-    // Show current leader (using the projected totals just printed above,
-    // since committed totals aren't updated until after this is displayed)
-    auto leader = std::max_element(roundScores.begin(), roundScores.end(),
-        [](const auto& a, const auto& b) { return a.second.second < b.second.second; });
-    if(leader != roundScores.end())
-    {
-        cout << "Current leader: " << leader->first << " with " << leader->second.second << " points" << endl;
-    }
-    cout << "=========================" << endl;
-}
-
-void TerminalRomanianWhist::displayFinalResults()
-{
-    cout << "\n=========================" << endl;
-    cout << "FINAL RESULTS" << endl;
-    cout << "=========================" << endl;
-    cout << left << setw(20) << "Player" << setw(15) << "Total Score" << endl;
-    cout << "--------------------------------------------------------" << endl;
-    
-    auto playerScores = game.getPlayerScores();
-    
-    for(const auto& [name, score] : playerScores)
-    {
-        cout << left << setw(20) << name << setw(15) << score << endl;
-    }
-    cout << "=========================" << endl;
-    
-    if(!playerScores.empty())
-    {
-        cout << "🏆 WINNER: " << playerScores[0].first << " with " << playerScores[0].second << " points! 🏆" << endl;
-    }
-    cout << "=========================" << endl;
-}
-
