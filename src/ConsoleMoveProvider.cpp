@@ -81,7 +81,6 @@ unsigned int ConsoleMoveProvider::makeBet(const std::vector<Card*>& hand, Card* 
         [this, &prompt](const std::string& error) { redraw(prompt, error); });
 
     ui.view.error.clear();
-    ui.view.hand.clear();
 
     return static_cast<unsigned int>(bet);
 }

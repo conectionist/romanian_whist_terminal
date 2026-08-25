@@ -1,5 +1,7 @@
 #include "GameView.h"
 
+#include "CardFormat.h"
+
 using romanian_whist::GameEngine;
 using romanian_whist::Round;
 
@@ -60,5 +62,31 @@ void refreshFromEngine(GameView& view, const GameEngine& game, unsigned int open
         seat.totalScore = player.getTotalScore();
         seat.winStreak = player.getConsecutiveWins();
         seat.lossStreak = player.getConsecutiveLosses();
+    }
+
+    // Rebuild the human's hand every frame rather than leaving whatever was
+    // last drawn on screen: cards leave the hand as they are played, and a hand
+    // held over from the previous round is worse than none at all.
+    //
+    // Unnumbered here. The move provider re-lays it with numbers when it is
+    // actually the human's turn to choose a card.
+    view.hand.clear();
+    view.legalCount = 0;
+
+    if(view.humanSeat < 0)
+        return;
+
+    std::vector<const romanian_whist::Card*> ordered(
+        players.at(static_cast<std::size_t>(view.humanSeat)).getHand().begin(),
+        players.at(static_cast<std::size_t>(view.humanSeat)).getHand().end());
+
+    CardFormat::sortForDisplay(ordered, trump);
+
+    for(const romanian_whist::Card* card : ordered)
+    {
+        HandEntry entry;
+        entry.card = *card;
+        entry.legal = true;
+        view.hand.push_back(entry);
     }
 }
