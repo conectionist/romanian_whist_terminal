@@ -238,10 +238,9 @@ void TerminalRomanianWhist::playCurrentRoundTricks()
         view.message = winner->getName() + " wins the trick.";
         refreshFromEngine(view, game, openingSeat);
         const bool moreTricks = trickIndex + 1 < trickCount;
-        renderer.drawFrame(view, moreTricks ? "Press Enter for the next trick" : "");
-
-        if(moreTricks)
-            pacer.trickPause();
+        renderer.drawFrame(view, moreTricks ? "Press Enter for the next trick"
+                                            : "Press Enter to see the round result");
+        pacer.trickPause();
     }
 }
 
