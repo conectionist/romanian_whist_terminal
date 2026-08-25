@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 project(RomanianWhistTerminal
-    VERSION 1.2.0
+    VERSION 1.3.0
     DESCRIPTION "Terminal UI client for the Romanian Whist engine"
     LANGUAGES CXX)
 
