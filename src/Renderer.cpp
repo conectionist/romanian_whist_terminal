@@ -141,8 +141,7 @@ void Renderer::appendHeader(std::string& out, const GameView& view) const
                           "/" + std::to_string(view.roundCount);
 
     std::string body = " " + title + "     " + details +
-                       "     " + std::to_string(view.trickCount) +
-                       (view.trickCount == 1 ? " trick" : " tricks") +
+                       "     Round of " + std::to_string(view.trickCount) +
                        "     " + roundTypeLabel(view.roundType);
 
     if(view.hasTrump)
@@ -405,9 +404,7 @@ void Renderer::drawFrame(const GameView& view, std::string_view prompt) const
                    " of " + std::to_string(view.seats.size()));
     else
         appendRule(frame, "SCORE",
-                   "bid " + std::to_string(view.betSum) + " of " +
-                   std::to_string(view.trickCount) +
-                   (view.trickCount == 1 ? " trick" : " tricks"));
+                   "Sum of bids: " + std::to_string(view.betSum));
 
     appendBlank(frame);
     appendSeatTable(frame, view);
