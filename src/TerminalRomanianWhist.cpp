@@ -239,12 +239,14 @@ void TerminalRomanianWhist::displayScoreboard()
              << setw(15) << scores.second << endl;
     }
     cout << "=========================" << endl;
-    
-    // Show current leader
-    auto playerScores = game.getPlayerScores();
-    if(!playerScores.empty())
+
+    // Show current leader (using the projected totals just printed above,
+    // since committed totals aren't updated until after this is displayed)
+    auto leader = std::max_element(roundScores.begin(), roundScores.end(),
+        [](const auto& a, const auto& b) { return a.second.second < b.second.second; });
+    if(leader != roundScores.end())
     {
-        cout << "Current leader: " << playerScores[0].first << " with " << playerScores[0].second << " points" << endl;
+        cout << "Current leader: " << leader->first << " with " << leader->second.second << " points" << endl;
     }
     cout << "=========================" << endl;
 }
