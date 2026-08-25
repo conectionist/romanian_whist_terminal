@@ -22,7 +22,12 @@ add_executable(terminal_romanian_whist
 target_compile_features(terminal_romanian_whist PRIVATE cxx_std_20)
 
 set_target_properties(terminal_romanian_whist PROPERTIES
-    OUTPUT_NAME "terminal_romanian_whist-${PROJECT_VERSION}")
+    OUTPUT_NAME "terminal_romanian_whist-${PROJECT_VERSION}"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
+    RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_BINARY_DIR}"
+    RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}"
+    RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO "${CMAKE_BINARY_DIR}"
+    RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL "${CMAKE_BINARY_DIR}")
 
 configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Version.h.in
