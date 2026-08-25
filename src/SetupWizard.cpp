@@ -1,0 +1,133 @@
+#include "SetupWizard.h"
+
+#include "Input.h"
+
+#include <string>
+
+using romanian_whist::GameStructure;
+
+namespace
+{
+
+const std::vector<std::string> BotNames = { "Ada", "Bob", "Cid", "Dot", "Eli" };
+
+} // namespace
+
+SetupWizard::SetupWizard(const Renderer& _renderer, const Terminal& _terminal)
+    : renderer(_renderer),
+      terminal(_terminal)
+{}
+
+int SetupWizard::ask(const std::string& title, const std::vector<std::string>& options) const
+{
+    const std::string prompt = "Choose 1-" + std::to_string(options.size()) + ": ";
+
+    renderer.drawQuestion(title, options, prompt);
+
+    return Input::readChoice(1, static_cast<int>(options.size()),
+        [this, &title, &options, &prompt](const std::string& error)
+        {
+            renderer.drawQuestion(title, options, prompt, error);
+        });
+}
+
+std::string SetupWizard::askName(const std::string& title,
+                                 const std::vector<std::string>& taken) const
+{
+    const std::string prompt = "Name: ";
+
+    renderer.drawQuestion(title, {}, prompt);
+
+    return Input::readName(MaximumNameLength, taken,
+        [this, &title, &prompt](const std::string& error)
+        {
+            renderer.drawQuestion(title, {}, prompt, error);
+        });
+}
+
+GameConfig SetupWizard::run() const
+{
+    // Nine questions before the first card is dealt is itself a reason not to
+    // play, so the common case gets to skip them.
+    const int start = ask("How do you want to start?",
+                          { "Quick game - you and three bots, 1-8-1",
+                            "Watch four bots play",
+                            "Set the game up myself" });
+
+    if(start == 1)
+    {
+        GameConfig config;
+        config.humanName = askName("What should we call you?", {});
+        config.aiNames = { BotNames[0], BotNames[1], BotNames[2] };
+        config.aiLevels = { 0, 0, 0 };
+        return config;
+    }
+
+    if(start == 2)
+        return demoConfig();
+
+    GameConfig config;
+
+    config.spectator = ask("Are you playing, or watching?",
+                           { "Playing", "Watching" }) == 2;
+
+    std::vector<std::string> taken;
+
+    if(!config.spectator)
+    {
+        config.humanName = askName("What should we call you?", taken);
+        taken.push_back(config.humanName);
+    }
+
+    // A human takes one of the seats, so the bot count has to leave room.
+    const int maximumBots = MaximumPlayers - (config.spectator ? 0 : 1);
+
+    std::vector<std::string> countOptions;
+    for(int i = 1 ; i <= maximumBots ; i++)
+        countOptions.push_back(std::to_string(i) + (i == 1 ? " bot" : " bots"));
+
+    const int botCount = ask("How many bots?", countOptions);
+
+    for(int i = 0 ; i < botCount ; i++)
+    {
+        const std::string name = askName("Name for bot " + std::to_string(i + 1) +
+                                         " of " + std::to_string(botCount), taken);
+        config.aiNames.push_back(name);
+        taken.push_back(name);
+    }
+
+    for(int i = 0 ; i < botCount ; i++)
+    {
+        const int level = ask("How should " + config.aiNames[i] + " play?",
+                              { "Randomly", "First playable card" });
+        config.aiLevels.push_back(level - 1);
+    }
+
+    config.structure = ask("Which shape of game?",
+                           { "1-8-1 - up from one card, then back down",
+                             "8-1-8 - down from eight cards, then back up" }) == 1
+        ? GameStructure::S_181
+        : GameStructure::S_818;
+
+    config.endWithForeheadAndHidden =
+        ask("End with forehead and hidden hands?", { "Yes", "No" }) == 1;
+
+    config.all1GamesAreForehead =
+        ask("Play every one-card round forehead?", { "No", "Yes" }) == 2;
+
+    return config;
+}
+
+GameConfig SetupWizard::demoConfig()
+{
+    GameConfig config;
+
+    config.spectator = true;
+    config.aiNames = { "Danutz", "Mihai", "Aditz", "Fane" };
+    config.aiLevels = { 1, 1, 0, 0 };
+    config.structure = GameStructure::S_181;
+    config.endWithForeheadAndHidden = true;
+    config.all1GamesAreForehead = false;
+
+    return config;
+}

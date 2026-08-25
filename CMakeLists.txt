@@ -22,6 +22,7 @@ add_executable(terminal_romanian_whist
     src/GameView.cpp
     src/Renderer.cpp
     src/Pacer.cpp
+    src/SetupWizard.cpp
     src/ConsoleMoveProvider.cpp
     src/TerminalRomanianWhist.cpp
 )

@@ -8,6 +8,7 @@
 #include "GameView.h"
 #include "Pacer.h"
 #include "Renderer.h"
+#include "SetupWizard.h"
 #include "Terminal.h"
 #include "UiContext.h"
 
@@ -41,8 +42,7 @@ public:
     void startGame();
 
 private:
-    void initialize();
-    void initializeTest();
+    void applySetup(const GameConfig& config);
     void loop();
     void playCurrentRoundTricks();
     void markCurrentlyWinning(const romanian_whist::Trick& trick,

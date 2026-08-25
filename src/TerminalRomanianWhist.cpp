@@ -1,7 +1,5 @@
 #include "TerminalRomanianWhist.h"
 
-#include <iostream>
-#include <unordered_map>
 
 #include <romanian_whist/Trick.h>
 #include <romanian_whist/Player.h>
@@ -11,8 +9,6 @@
 #include <romanian_whist/strategies/FirstCardStrategy.h>
 #include <romanian_whist/strategies/RandomCardStrategy.h>
 
-using std::cin, std::cout, std::endl;
-using std::string, std::vector;
 using namespace romanian_whist;
 
 TerminalRomanianWhist::TerminalRomanianWhist(AppOptions& _options) : options(_options),
@@ -40,105 +36,36 @@ unsigned int TerminalRomanianWhist::seatOf(PlayerList::const_iterator player) co
 
 void TerminalRomanianWhist::startGame()
 {
-    if(options.demo)
-        initializeTest();
-    else
-        initialize();
+    SetupWizard wizard(renderer, terminal);
+
+    applySetup(options.demo ? SetupWizard::demoConfig() : wizard.run());
 
     loop();
 }
 
-void TerminalRomanianWhist::initialize()
+void TerminalRomanianWhist::applySetup(const GameConfig& config)
 {
-    int mode;
-    cout << "Choose the mode:" << endl;
-    cout << "1) Participant (you vs AI bots)" << endl;
-    cout << "2) Spectator (watch AI bots compete)" << endl;
-    cin >> mode;
-    bool isParticipant = mode == 1;
-
-    string playerName;
-    if(isParticipant)
-    {
-        cout << "Enter your name:" << endl;
-        cin >> playerName;
-    }
-
-    int aiCount;
-    cout << "Enter the number of AI players (1-5):" << endl;
-    cin >> aiCount;
-
-    vector<string> aiNames(aiCount);
-    cout << "Enter the names of the " << aiCount << " AI players:" << endl;
-    for(int i = 0 ; i < aiCount ; i++)
-        cin >> aiNames[i];
-
-    vector<int> aiLevels(aiCount);
-    for(int i = 0 ; i < aiCount ; i++)
-    {
-        cout << "Choose the level for " << aiNames[i] << ":" << endl;
-        cout << "0) Random" << endl;
-        cout << "1) First" << endl;
-        cin >> aiLevels[i];
-    }
-
-    int gameStructure;
-    cout << "Choose the game structure:" << endl;
-    cout << "1) 1-8-1" << endl;
-    cout << "2) 8-1-8" << endl;
-    cin >> gameStructure;
-
-    int endWithForeheadAndHidden;
-    cout << "Should the game end with forehead and hidden hands?" << endl;
-    cout << "1) Yes" << endl;
-    cout << "2) No" << endl;
-    cin >> endWithForeheadAndHidden;
-
-    int all1GamesAreForehead;
-    cout << "Should all 1-games be forehead?" << endl;
-    cout << "1) Of course not!" << endl;
-    cout << "2) Sure!" << endl;
-    cin >> all1GamesAreForehead;
-
-    if(isParticipant)
+    if(!config.spectator)
     {
         // Seated first, so seat 0 is the human whenever there is one.
-        game.addPlayer(playerName, std::make_unique<ConsoleMoveProvider>(ui));
+        game.addPlayer(config.humanName, std::make_unique<ConsoleMoveProvider>(ui));
         view.humanSeat = 0;
     }
 
-    for(int i = 0 ; i < aiCount ; i++)
+    for(std::size_t i = 0 ; i < config.aiNames.size() ; i++)
     {
-        std::unique_ptr<IStrategy> strategy = aiLevels[i] == 0
+        std::unique_ptr<IStrategy> strategy = config.aiLevels[i] == 0
             ? std::unique_ptr<IStrategy>(std::make_unique<RandomCardStrategy>())
             : std::unique_ptr<IStrategy>(std::make_unique<FirstCardStrategy>());
-        game.addPlayer(aiNames[i], std::make_unique<AiMoveProvider>(std::move(strategy)));
+
+        game.addPlayer(config.aiNames[i], std::make_unique<AiMoveProvider>(std::move(strategy)));
     }
 
-    int playerCount = aiCount + (isParticipant ? 1 : 0);
+    game.initializeScoreboard(config.structure,
+                              config.endWithForeheadAndHidden,
+                              config.all1GamesAreForehead);
 
-    game.initializeScoreboard(gameStructure == 1 ? GameStructure::S_181 : GameStructure::S_818,
-                              endWithForeheadAndHidden == 1,
-                              all1GamesAreForehead == 1);
-
-    game.initializeDeck(playerCount);
-}
-
-void TerminalRomanianWhist::initializeTest()
-{
-    int playerCount = 4;
-    
-    //game.addPlayer("Danutz", std::make_unique<ConsoleMoveProvider>());
-    game.addPlayer("Danutz", std::make_unique<AiMoveProvider>(std::make_unique<FirstCardStrategy>()));
-    game.addPlayer("Mihai", std::make_unique<AiMoveProvider>(std::make_unique<FirstCardStrategy>()));
-    game.addPlayer("Aditz", std::make_unique<AiMoveProvider>(std::make_unique<RandomCardStrategy>()));
-    game.addPlayer("Fane", std::make_unique<AiMoveProvider>(std::make_unique<RandomCardStrategy>()));
-    
-    game.initializeScoreboard(GameStructure::S_181,
-                              true,
-                              false);
-
-    game.initializeDeck(playerCount);
+    game.initializeDeck(game.getPlayerCount());
 }
 
 void TerminalRomanianWhist::loop()
