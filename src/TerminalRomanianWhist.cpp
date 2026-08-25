@@ -18,22 +18,45 @@ using namespace romanian_whist;
 
 void TerminalRomanianWhist::startGame()
 {
-    //initialize();
-    initializeTest();
+    initialize();
+    //initializeTest();
 
     loop();
 }
 
 void TerminalRomanianWhist::initialize()
 {
-    int playerCount;
-    cout << "Enter the number of players (2-6):" << endl;
-    cin >> playerCount;
+    int mode;
+    cout << "Choose the mode:" << endl;
+    cout << "1) Participant (you vs AI bots)" << endl;
+    cout << "2) Spectator (watch AI bots compete)" << endl;
+    cin >> mode;
+    bool isParticipant = mode == 1;
 
-    vector<string> playerNames(playerCount);
-    cout << "Enter the names of the " << playerCount << " players:" << endl;
-    for(int i = 0 ; i < playerCount ; i++)
-        cin >> playerNames[i];
+    string playerName;
+    if(isParticipant)
+    {
+        cout << "Enter your name:" << endl;
+        cin >> playerName;
+    }
+
+    int aiCount;
+    cout << "Enter the number of AI players (1-5):" << endl;
+    cin >> aiCount;
+
+    vector<string> aiNames(aiCount);
+    cout << "Enter the names of the " << aiCount << " AI players:" << endl;
+    for(int i = 0 ; i < aiCount ; i++)
+        cin >> aiNames[i];
+
+    vector<int> aiLevels(aiCount);
+    for(int i = 0 ; i < aiCount ; i++)
+    {
+        cout << "Choose the level for " << aiNames[i] << ":" << endl;
+        cout << "0) Random" << endl;
+        cout << "1) First" << endl;
+        cin >> aiLevels[i];
+    }
 
     int gameStructure;
     cout << "Choose the game structure:" << endl;
@@ -53,10 +76,20 @@ void TerminalRomanianWhist::initialize()
     cout << "2) Sure!" << endl;
     cin >> all1GamesAreForehead;
 
-    for(const auto& name : playerNames)
-        game.addPlayer(name, std::make_unique<ConsoleMoveProvider>());
+    if(isParticipant)
+        game.addPlayer(playerName, std::make_unique<ConsoleMoveProvider>());
 
-    game.initializeScoreboard(gameStructure == 0 ? GameStructure::S_181 : GameStructure::S_818,
+    for(int i = 0 ; i < aiCount ; i++)
+    {
+        std::unique_ptr<IStrategy> strategy = aiLevels[i] == 0
+            ? std::unique_ptr<IStrategy>(std::make_unique<RandomCardStrategy>())
+            : std::unique_ptr<IStrategy>(std::make_unique<FirstCardStrategy>());
+        game.addPlayer(aiNames[i], std::make_unique<AiMoveProvider>(std::move(strategy)));
+    }
+
+    int playerCount = aiCount + (isParticipant ? 1 : 0);
+
+    game.initializeScoreboard(gameStructure == 1 ? GameStructure::S_181 : GameStructure::S_818,
                               endWithForeheadAndHidden == 1,
                               all1GamesAreForehead == 1);
 
