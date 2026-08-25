@@ -30,9 +30,7 @@ public:
     explicit ConsoleMoveProvider(UiContext& _ui);
     virtual ~ConsoleMoveProvider() = default;
 
-    virtual unsigned int makeBet(const std::vector<romanian_whist::Card*>& hand,
-                                 romanian_whist::Card* trump,
-                                 bool isFirstPlayer) override;
+    virtual unsigned int makeBet(const romanian_whist::BetContext& context) override;
 
     virtual romanian_whist::Card* playCard(const std::vector<romanian_whist::Card*>& hand,
                                            romanian_whist::Card* trump,
