@@ -6,6 +6,11 @@
 #include <cstdlib>
 
 #ifdef _WIN32
+    // windows.h defines min and max as macros unless asked not to, which turns
+    // any later std::min( into std::( and fails to compile.
+    #ifndef NOMINMAX
+        #define NOMINMAX
+    #endif
     #include <io.h>
     #include <windows.h>
 #else
@@ -48,7 +53,7 @@ extern "C" void restoreTerminalOnInterrupt(int)
     const char restore[] = "\x1b[?25h\x1b[0m\x1b[?1049l";
 
 #ifdef _WIN32
-    _write(_fileno(stdout), restore, sizeof(restore) - 1);
+    _write(_fileno(stdout), restore, static_cast<unsigned int>(sizeof(restore) - 1));
     _exit(130);
 #else
     const ssize_t written = write(STDOUT_FILENO, restore, sizeof(restore) - 1);

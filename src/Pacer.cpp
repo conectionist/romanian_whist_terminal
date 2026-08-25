@@ -8,6 +8,12 @@
 #include <thread>
 
 #ifdef _WIN32
+    // See the note in Terminal.cpp: any Windows header that drags in windows.h
+    // would define min as a macro and break the std::min below.
+    #ifndef NOMINMAX
+        #define NOMINMAX
+    #endif
+
     #include <conio.h>
 #else
     #include <poll.h>

@@ -8,6 +8,11 @@
 #include <string>
 
 #ifdef _WIN32
+    // windows.h defines min and max as macros unless asked not to, which turns
+    // any later std::min( into std::( and fails to compile.
+    #ifndef NOMINMAX
+        #define NOMINMAX
+    #endif
     #include <io.h>
     #include <windows.h>
 #else
