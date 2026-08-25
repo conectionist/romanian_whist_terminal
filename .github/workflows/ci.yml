@@ -19,13 +19,20 @@ jobs:
       - name: Configure
         run: cmake --preset release
 
+      - name: Get project version
+        id: version
+        shell: bash
+        run: |
+          version=$(grep -m1 '^CMAKE_PROJECT_VERSION:' build-release/CMakeCache.txt | cut -d= -f2)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
       - name: Build
         run: cmake --build --preset release
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
-          name: terminal_romanian_whist-${{ matrix.os }}
+          name: terminal_romanian_whist-${{ steps.version.outputs.version }}-${{ matrix.os }}
           path: build-release/terminal_romanian_whist-*
 
   release:
