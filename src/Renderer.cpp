@@ -178,8 +178,22 @@ void Renderer::appendSeatTable(std::string& out, const GameView& view) const
     out += terminal.dim(header);
     terminal.endLine(out);
 
+    // Rows sit in bidding order rather than fixed seat order, so row N is
+    // always "whoever bids Nth this round" and names rotate through it as the
+    // opener changes - the Bid# column reads 1..N straight down either way.
+    std::vector<const SeatView*> ordered;
+    ordered.reserve(view.seats.size());
     for(const SeatView& seat : view.seats)
+        ordered.push_back(&seat);
+
+    std::sort(ordered.begin(), ordered.end(), [](const SeatView* a, const SeatView* b)
     {
+        return a->bidOrder < b->bidOrder;
+    });
+
+    for(const SeatView* seatPtr : ordered)
+    {
+        const SeatView& seat = *seatPtr;
         const bool active = view.activeSeat >= 0 &&
                             static_cast<unsigned int>(view.activeSeat) == seat.seatIndex;
 
