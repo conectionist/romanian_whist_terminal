@@ -3,7 +3,6 @@
 #include <romanian_whist/CardValidator.h>
 
 #include <iostream>
-#include <algorithm>
 #include <limits>
 #include <stdexcept>
 #include <string>
@@ -61,7 +60,7 @@ unsigned int ConsoleMoveProvider::makeBet(const std::vector<Card*>& hand, Card* 
                            std::to_string(maxBet) + ": "));
 }
 
-Card* ConsoleMoveProvider::playCard(std::vector<Card*>& hand, Card* trump, const Suit* leadSuit)
+Card* ConsoleMoveProvider::playCard(const std::vector<Card*>& hand, Card* trump, const Suit* leadSuit)
 {
     CardValidator cardValidator;
     std::vector<Card*> legalCards = cardValidator.getLegalCards(hand, trump, leadSuit);
@@ -87,7 +86,5 @@ Card* ConsoleMoveProvider::playCard(std::vector<Card*>& hand, Card* trump, const
                                   "Invalid choice. Enter a number between 0 and " +
                                   std::to_string(maxIndex) + ": ");
 
-    Card* card = legalCards[static_cast<std::size_t>(choice)];
-    hand.erase(std::find(hand.begin(), hand.end(), card));
-    return card;
+    return legalCards[static_cast<std::size_t>(choice)];
 }

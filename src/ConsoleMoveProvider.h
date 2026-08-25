@@ -15,7 +15,7 @@ public:
                                  romanian_whist::Card* trump,
                                  bool isFirstPlayer) override;
 
-    virtual romanian_whist::Card* playCard(std::vector<romanian_whist::Card*>& hand,
+    virtual romanian_whist::Card* playCard(const std::vector<romanian_whist::Card*>& hand,
                                            romanian_whist::Card* trump,
                                            const romanian_whist::Suit* leadSuit) override;
 };
