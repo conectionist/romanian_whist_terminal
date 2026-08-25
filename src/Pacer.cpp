@@ -123,16 +123,17 @@ void Pacer::trickPause()
     if(skipRestOfRound)
         return;
 
-    if(humanIsPlaying && terminal.interactive() && !options.autoAdvance)
+    if(!terminal.interactive())
+        return;
+
+    if(options.autoAdvance)
     {
-        Input::waitForEnter(true);
+        if(sleepOrSkip(options.trickDwell))
+            skipRestOfRound = true;
         return;
     }
 
-    // Watching bots, a keypress per trick would be over a hundred presses in a
-    // game. Dwell on the finished trick instead.
-    if(sleepOrSkip(options.trickDwell))
-        skipRestOfRound = true;
+    Input::waitForEnter(true);
 }
 
 void Pacer::roundPause()
