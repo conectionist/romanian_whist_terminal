@@ -1,10 +1,10 @@
 #include "ConsoleMoveProvider.h"
 
+#include "Input.h"
+
 #include <romanian_whist/CardValidator.h>
 
 #include <iostream>
-#include <limits>
-#include <stdexcept>
 #include <string>
 
 using romanian_whist::Card;
@@ -14,50 +14,29 @@ using romanian_whist::Suit;
 namespace
 {
 
-// Reads an integer in [0, maxValid] from stdin, re-prompting until one arrives.
-//
-// `value` must be initialised: at end-of-file operator>> fails while constructing
-// its sentry, which returns without ever writing to the target. Reading an
-// uninitialised int there would be undefined behaviour.
-//
-// Malformed input is recoverable (clear the failure, discard the offending line).
-// EOF is not: no further input can ever arrive, so re-prompting would spin
-// forever. It propagates as an exception for main() to report.
-int readChoice(int maxValid, const std::string& prompt)
+// Until the provider draws whole frames, a re-prompt just prints the reason
+// followed by the prompt again.
+Input::Redraw reprompt(const std::string& prompt)
 {
-    int value = 0;
-
-    while(true)
+    return [prompt](const std::string& error)
     {
-        if(std::cin >> value)
-        {
-            if(value >= 0 && value <= maxValid)
-                return value;
-        }
-        else
-        {
-            if(std::cin.eof())
-                throw std::runtime_error("Input closed while awaiting a choice.");
-
-            std::cin.clear();
-            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        }
-
-        std::cout << prompt;
-    }
+        std::cout << error << " " << prompt;
+    };
 }
 
 } // namespace
 
 unsigned int ConsoleMoveProvider::makeBet(const std::vector<Card*>& hand, Card* trump, bool isFirstPlayer)
 {
+    (void)trump;
+    (void)isFirstPlayer;
+
     const int maxBet = static_cast<int>(hand.size());
+    const std::string prompt = "Enter bet (0-" + std::to_string(maxBet) + "): ";
 
-    std::cout << "Enter bet (0-" << maxBet << "): ";
+    std::cout << prompt;
 
-    return static_cast<unsigned int>(
-        readChoice(maxBet, "Invalid bet. Enter a number between 0 and " +
-                           std::to_string(maxBet) + ": "));
+    return static_cast<unsigned int>(Input::readChoice(0, maxBet, reprompt(prompt)));
 }
 
 Card* ConsoleMoveProvider::playCard(const std::vector<Card*>& hand, Card* trump, const Suit* leadSuit)
@@ -79,12 +58,11 @@ Card* ConsoleMoveProvider::playCard(const std::vector<Card*>& hand, Card* trump,
         std::cout << i << ") " << legalCards[i]->toString() << std::endl;
 
     const int maxIndex = static_cast<int>(legalCards.size()) - 1;
+    const std::string prompt = "Choose a card (0-" + std::to_string(maxIndex) + "): ";
 
-    std::cout << "Choose a card (0-" << maxIndex << "): ";
+    std::cout << prompt;
 
-    const int choice = readChoice(maxIndex,
-                                  "Invalid choice. Enter a number between 0 and " +
-                                  std::to_string(maxIndex) + ": ");
+    const int choice = Input::readChoice(0, maxIndex, reprompt(prompt));
 
     return legalCards[static_cast<std::size_t>(choice)];
 }
