@@ -16,10 +16,16 @@ using std::cin, std::cout, std::endl, std::left, std::setw;
 using std::string, std::vector;
 using namespace romanian_whist;
 
+TerminalRomanianWhist::TerminalRomanianWhist(AppOptions& _options) : options(_options),
+                                                                     terminal(options)
+{}
+
 void TerminalRomanianWhist::startGame()
 {
-    initialize();
-    //initializeTest();
+    if(options.demo)
+        initializeTest();
+    else
+        initialize();
 
     loop();
 }
