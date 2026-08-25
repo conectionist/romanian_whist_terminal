@@ -253,35 +253,50 @@ void Renderer::appendTrick(std::string& out, const GameView& view) const
                rightCaption);
     appendBlank(out);
 
-    // Seats appear in the order they played, so the table reads the way it was
-    // dealt out rather than by seat number.
-    for(const PlayedCardView& played : view.table)
+    // Every seat appears from the start, in the order it plays this trick, so
+    // the panel does not grow card by card - only the marker and card change
+    // as the trick plays out.
+    const unsigned int playerCount = static_cast<unsigned int>(view.seats.size());
+
+    for(unsigned int step = 0 ; step < playerCount ; step++)
     {
-        const SeatView& seat = view.seats[played.seatIndex];
+        const unsigned int seatIndex = (view.leadSeat + step) % playerCount;
+        const SeatView& seat = view.seats[seatIndex];
 
-        std::string row = std::string(IndentWidth + MarkerWidth + 2, ' ') +
-                          pad(seat.name, NameWidth) +
-                          pad(cardFormat.card(played.card), 6);
+        const PlayedCardView* played = nullptr;
+        for(const PlayedCardView& candidate : view.table)
+        {
+            if(candidate.seatIndex == seatIndex)
+            {
+                played = &candidate;
+                break;
+            }
+        }
 
-        if(played.isWinning)
-            row += terminal.paint(view.table.size() == view.seats.size() ? "wins" : "winning",
-                                  Terminal::Color::Green, true);
-
-        appendTrimmed(out, row);
-    }
-
-    // A placeholder for whoever is on turn keeps the panel from jumping about
-    // as cards land in it.
-    if(view.activeSeat >= 0 && view.table.size() < view.seats.size())
-    {
-        const SeatView& seat = view.seats[static_cast<std::size_t>(view.activeSeat)];
+        const bool active = view.activeSeat >= 0 &&
+                            static_cast<unsigned int>(view.activeSeat) == seatIndex;
 
         std::string row = std::string(IndentWidth, ' ') +
-                          pad(">", MarkerWidth) + "  " +
-                          pad(seat.name, NameWidth) +
-                          terminal.dim("--");
+                          pad(active ? ">" : "", MarkerWidth) + "  " +
+                          pad(seat.name, NameWidth);
 
-        out += terminal.paint(row, Terminal::Color::Green, true);
+        if(played != nullptr)
+        {
+            row += pad(cardFormat.card(played->card), 6);
+
+            if(played->isWinning)
+                row += terminal.paint(view.table.size() == playerCount ? "wins" : "winning",
+                                      Terminal::Color::Green, true);
+
+            appendTrimmed(out, row);
+            continue;
+        }
+
+        row += "--";
+
+        // The active seat is highlighted; seats still waiting their turn are
+        // dimmed instead, so the one row that matters stands out at a glance.
+        out += active ? terminal.paint(row, Terminal::Color::Green, true) : terminal.dim(row);
         terminal.endLine(out);
     }
 }
