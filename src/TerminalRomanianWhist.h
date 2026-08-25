@@ -6,6 +6,7 @@
 #include "AppOptions.h"
 #include "CardFormat.h"
 #include "GameView.h"
+#include "Pacer.h"
 #include "Renderer.h"
 #include "Terminal.h"
 #include "UiContext.h"
@@ -19,6 +20,7 @@ private:
     Terminal terminal;
     CardFormat cardFormat;
     Renderer renderer;
+    Pacer pacer;
     GameView view;
     UiContext ui;
 

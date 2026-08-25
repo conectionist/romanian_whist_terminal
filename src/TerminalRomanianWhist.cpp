@@ -19,6 +19,7 @@ TerminalRomanianWhist::TerminalRomanianWhist(AppOptions& _options) : options(_op
                                                                      terminal(options),
                                                                      cardFormat(terminal),
                                                                      renderer(terminal, cardFormat),
+                                                                     pacer(options, terminal),
                                                                      ui{options, terminal, renderer, cardFormat, view}
 {}
 
@@ -144,6 +145,8 @@ void TerminalRomanianWhist::loop()
 {
     game.setStatus(GameStatus::InProgress);
 
+    pacer.setHumanIsPlaying(view.humanSeat >= 0);
+
     while(game.isInProgress())
     {
         game.shuffleDeck();
@@ -162,8 +165,19 @@ void TerminalRomanianWhist::loop()
             view.activeSeat = static_cast<int>(seatOf(currentPlayer));
             refreshFromEngine(view, game, openingSeat);
 
+            const bool isHuman = view.activeSeat == view.humanSeat;
+            if(!isHuman)
+                renderer.drawFrame(view);
+
             const unsigned int bet = currentPlayer->getBet(game.getCurrentTrumpCard(), i == 0);
             game.placeBet(currentPlayer, bet);
+
+            if(!isHuman)
+            {
+                refreshFromEngine(view, game, openingSeat);
+                renderer.drawFrame(view);
+                pacer.beat();
+            }
 
             currentPlayer = game.getNextPlayer(currentPlayer);
         }
@@ -189,7 +203,7 @@ void TerminalRomanianWhist::loop()
         view.message.clear();
         refreshFromEngine(view, game, openingSeat);
         renderer.drawFrame(view, "Press Enter to deal the next round");
-        Input::waitForEnter(terminal.interactive() && !options.autoAdvance);
+        pacer.roundPause();
 
         game.commitRoundScores();
         game.completeCurrentRound();
@@ -207,6 +221,8 @@ void TerminalRomanianWhist::playCurrentRoundTricks()
     const unsigned int playerCount = game.getPlayerCount();
 
     std::vector<unsigned int> tricksWon(playerCount, 0);
+
+    pacer.resetSkip();
 
     for(unsigned int trickIndex = 0 ; trickIndex < trickCount ; trickIndex++)
     {
@@ -238,6 +254,7 @@ void TerminalRomanianWhist::playCurrentRoundTricks()
             {
                 view.hint = currentPlayer->getName() + " is thinking...";
                 renderer.drawFrame(view);
+                pacer.beat();
             }
 
             Card* trump = game.getCurrentTrumpCard();
@@ -259,6 +276,12 @@ void TerminalRomanianWhist::playCurrentRoundTricks()
             refreshFromEngine(view, game, openingSeat);
             renderer.drawFrame(view);
 
+            // The human's own card needs no pause: the time they spent choosing
+            // it already served as one, and the next bot's beat gives the card a
+            // moment on screen before another lands on top of it.
+            if(!isHuman)
+                pacer.beat();
+
             currentPlayer = game.getNextPlayer(currentPlayer);
         }
 
@@ -278,10 +301,11 @@ void TerminalRomanianWhist::playCurrentRoundTricks()
         view.activeSeat = -1;
         view.message = winner->getName() + " wins the trick.";
         refreshFromEngine(view, game, openingSeat);
-        renderer.drawFrame(view, trickCount > trickIndex + 1 ? "Press Enter for the next trick" : "");
+        const bool moreTricks = trickIndex + 1 < trickCount;
+        renderer.drawFrame(view, moreTricks ? "Press Enter for the next trick" : "");
 
-        if(trickCount > trickIndex + 1)
-            Input::waitForEnter(terminal.interactive() && !options.autoAdvance);
+        if(moreTricks)
+            pacer.trickPause();
     }
 }
 
