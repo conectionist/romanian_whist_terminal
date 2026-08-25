@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 project(RomanianWhistTerminal
-    VERSION 1.0.2
+    VERSION 1.1.0
     DESCRIPTION "Terminal UI client for the Romanian Whist engine"
     LANGUAGES CXX)
 
@@ -15,6 +15,14 @@ add_subdirectory(libs/RomanianWhistEngine)
 
 add_executable(terminal_romanian_whist
     src/main.cpp
+    src/AppOptions.cpp
+    src/Terminal.cpp
+    src/CardFormat.cpp
+    src/Input.cpp
+    src/GameView.cpp
+    src/Renderer.cpp
+    src/Pacer.cpp
+    src/SetupWizard.cpp
     src/ConsoleMoveProvider.cpp
     src/TerminalRomanianWhist.cpp
 )

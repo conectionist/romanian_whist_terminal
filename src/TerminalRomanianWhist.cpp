@@ -1,276 +1,258 @@
 #include "TerminalRomanianWhist.h"
 
-#include <iostream>
-#include <unordered_map>
-#include <iomanip>
-#include <algorithm>
+#include <stdexcept>
+
 
 #include <romanian_whist/Trick.h>
 #include <romanian_whist/Player.h>
 #include "ConsoleMoveProvider.h"
+#include "Input.h"
 #include <romanian_whist/AiMoveProvider.h>
 #include <romanian_whist/strategies/FirstCardStrategy.h>
 #include <romanian_whist/strategies/RandomCardStrategy.h>
 
-using std::cin, std::cout, std::endl, std::left, std::setw;
-using std::string, std::vector;
 using namespace romanian_whist;
+
+TerminalRomanianWhist::TerminalRomanianWhist(AppOptions& _options) : options(_options),
+                                                                     terminal(options),
+                                                                     cardFormat(terminal),
+                                                                     renderer(terminal, cardFormat),
+                                                                     pacer(options, terminal),
+                                                                     ui{options, terminal, renderer, cardFormat, view}
+{}
+
+unsigned int TerminalRomanianWhist::seatOf(PlayerList::const_iterator player) const
+{
+    // By address, not by name: two players may share a name, and list nodes do
+    // not move.
+    const auto& players = game.getPlayers();
+
+    for(unsigned int i = 0 ; i < players.size() ; i++)
+    {
+        if(&players.at(i) == &*player)
+            return i;
+    }
+
+    return 0;
+}
 
 void TerminalRomanianWhist::startGame()
 {
-    initialize();
-    //initializeTest();
+    SetupWizard wizard(renderer, terminal);
+
+    applySetup(options.demo ? SetupWizard::demoConfig() : wizard.run());
 
     loop();
 }
 
-void TerminalRomanianWhist::initialize()
+void TerminalRomanianWhist::applySetup(const GameConfig& config)
 {
-    int mode;
-    cout << "Choose the mode:" << endl;
-    cout << "1) Participant (you vs AI bots)" << endl;
-    cout << "2) Spectator (watch AI bots compete)" << endl;
-    cin >> mode;
-    bool isParticipant = mode == 1;
-
-    string playerName;
-    if(isParticipant)
+    if(!config.spectator)
     {
-        cout << "Enter your name:" << endl;
-        cin >> playerName;
+        // Seated first, so seat 0 is the human whenever there is one.
+        game.addPlayer(config.humanName, std::make_unique<ConsoleMoveProvider>(ui));
+        view.humanSeat = 0;
     }
 
-    int aiCount;
-    cout << "Enter the number of AI players (1-5):" << endl;
-    cin >> aiCount;
-
-    vector<string> aiNames(aiCount);
-    cout << "Enter the names of the " << aiCount << " AI players:" << endl;
-    for(int i = 0 ; i < aiCount ; i++)
-        cin >> aiNames[i];
-
-    vector<int> aiLevels(aiCount);
-    for(int i = 0 ; i < aiCount ; i++)
+    for(std::size_t i = 0 ; i < config.aiNames.size() ; i++)
     {
-        cout << "Choose the level for " << aiNames[i] << ":" << endl;
-        cout << "0) Random" << endl;
-        cout << "1) First" << endl;
-        cin >> aiLevels[i];
-    }
-
-    int gameStructure;
-    cout << "Choose the game structure:" << endl;
-    cout << "1) 1-8-1" << endl;
-    cout << "2) 8-1-8" << endl;
-    cin >> gameStructure;
-
-    int endWithForeheadAndHidden;
-    cout << "Should the game end with forehead and hidden hands?" << endl;
-    cout << "1) Yes" << endl;
-    cout << "2) No" << endl;
-    cin >> endWithForeheadAndHidden;
-
-    int all1GamesAreForehead;
-    cout << "Should all 1-games be forehead?" << endl;
-    cout << "1) Of course not!" << endl;
-    cout << "2) Sure!" << endl;
-    cin >> all1GamesAreForehead;
-
-    if(isParticipant)
-        game.addPlayer(playerName, std::make_unique<ConsoleMoveProvider>());
-
-    for(int i = 0 ; i < aiCount ; i++)
-    {
-        std::unique_ptr<IStrategy> strategy = aiLevels[i] == 0
+        std::unique_ptr<IStrategy> strategy = config.aiLevels[i] == 0
             ? std::unique_ptr<IStrategy>(std::make_unique<RandomCardStrategy>())
             : std::unique_ptr<IStrategy>(std::make_unique<FirstCardStrategy>());
-        game.addPlayer(aiNames[i], std::make_unique<AiMoveProvider>(std::move(strategy)));
+
+        game.addPlayer(config.aiNames[i], std::make_unique<AiMoveProvider>(std::move(strategy)));
     }
 
-    int playerCount = aiCount + (isParticipant ? 1 : 0);
+    game.initializeScoreboard(config.structure,
+                              config.endWithForeheadAndHidden,
+                              config.all1GamesAreForehead);
 
-    game.initializeScoreboard(gameStructure == 1 ? GameStructure::S_181 : GameStructure::S_818,
-                              endWithForeheadAndHidden == 1,
-                              all1GamesAreForehead == 1);
-
-    game.initializeDeck(playerCount);
-}
-
-void TerminalRomanianWhist::initializeTest()
-{
-    int playerCount = 4;
-    
-    //game.addPlayer("Danutz", std::make_unique<ConsoleMoveProvider>());
-    game.addPlayer("Danutz", std::make_unique<AiMoveProvider>(std::make_unique<FirstCardStrategy>()));
-    game.addPlayer("Mihai", std::make_unique<AiMoveProvider>(std::make_unique<FirstCardStrategy>()));
-    game.addPlayer("Aditz", std::make_unique<AiMoveProvider>(std::make_unique<RandomCardStrategy>()));
-    game.addPlayer("Fane", std::make_unique<AiMoveProvider>(std::make_unique<RandomCardStrategy>()));
-    
-    game.initializeScoreboard(GameStructure::S_181,
-                              true,
-                              false);
-
-    game.initializeDeck(playerCount);
+    game.initializeDeck(game.getPlayerCount());
 }
 
 void TerminalRomanianWhist::loop()
 {
     game.setStatus(GameStatus::InProgress);
 
+    pacer.setHumanIsPlaying(view.humanSeat >= 0);
+
     while(game.isInProgress())
     {
         game.shuffleDeck();
         game.dealCards();
 
-        cout << "\n=========================\n";
+        openingSeat = seatOf(game.getCurrentRound().getOpeningPlayer());
 
-        cout << "Joc de " << game.getCurrentRoundTrickCount() << endl;
-
-        auto* trump = game.getCurrentTrumpCard();
-        if(trump)
-            cout << "The trump card is " << trump->toString() << endl;
-        else
-            cout << "Game of 8. No trump card!" << endl;
+        view.phase = Phase::Betting;
+        view.message.clear();
+        view.table.clear();
 
         auto currentPlayer = game.getFirstPlayerOfTheRound();
 
         for(unsigned int i = 0 ; i < game.getPlayerCount() ; i++)
         {
-            bool isFirstPlayer = currentPlayer->getName() == game.getFirstPlayerOfTheRound()->getName();
-            unsigned int bet = currentPlayer->getBet(game.getCurrentTrumpCard(), isFirstPlayer);
+            view.activeSeat = static_cast<int>(seatOf(currentPlayer));
+            refreshFromEngine(view, game, openingSeat);
+
+            const bool isHuman = view.activeSeat == view.humanSeat;
+            if(!isHuman)
+                renderer.drawFrame(view);
+
+            const unsigned int bet = currentPlayer->getBet(game.getCurrentTrumpCard(), i == 0);
             game.placeBet(currentPlayer, bet);
+
+            if(!isHuman)
+            {
+                refreshFromEngine(view, game, openingSeat);
+                renderer.drawFrame(view);
+                pacer.beat();
+            }
+
+            currentPlayer = game.getNextPlayer(currentPlayer);
+        }
+
+        // Seed every seat's result. setResult assigns rather than accumulates,
+        // so the per-trick updates that follow keep it live - but a player who
+        // wins nothing would otherwise never be written at all.
+        currentPlayer = game.getFirstPlayerOfTheRound();
+        for(unsigned int i = 0 ; i < game.getPlayerCount() ; i++)
+        {
+            game.setResult(currentPlayer, 0);
             currentPlayer = game.getNextPlayer(currentPlayer);
         }
 
         playCurrentRoundTricks();
-        
-        // Calculate scores (but don't reset yet so we can display round scores)
-        game.calculateScores();
-        displayScoreboard();
-        
-        // Now commit the round scores to total scores
-        game.commitRoundScores();
-        
-        game.completeCurrentRound();
 
-        cout << "\n=========================\n";
+        // Score the round but hold off committing, so the scoreboard can show
+        // what the round was worth alongside the total it folds into.
+        game.calculateScores();
+
+        view.phase = Phase::RoundEnd;
+        view.activeSeat = -1;
+        view.message.clear();
+        refreshFromEngine(view, game, openingSeat);
+        renderer.drawFrame(view, "Press Enter to deal the next round");
+        pacer.roundPause();
+
+        game.commitRoundScores();
+        game.completeCurrentRound();
     }
-    
-    // Display final results
-    cout << "\n=========================\n";
-    cout << "GAME OVER" << endl;
-    cout << "=========================\n";
-    displayFinalResults();
+
+    // Off the alternate screen first, so the result is still there after the
+    // program exits.
+    terminal.leaveAltScreen();
+    renderer.drawGameOver(game.getPlayerScores());
 }
 
 void TerminalRomanianWhist::playCurrentRoundTricks()
 {
     const unsigned int trickCount = game.getCurrentRoundTrickCount();
-    
-    // Track tricks won by each player
-    std::unordered_map<std::string, unsigned int> tricksWon;
-    
-    // Initialize all players with 0 tricks won
-    auto firstPlayer = game.getFirstPlayerOfTheRound();
-    auto currentPlayer = firstPlayer;
-    for(unsigned int i = 0 ; i < game.getPlayerCount() ; i++)
-    {
-        tricksWon[currentPlayer->getName()] = 0;
-        currentPlayer = game.getNextPlayer(currentPlayer);
-    }
+    const unsigned int playerCount = game.getPlayerCount();
+
+    std::vector<unsigned int> tricksWon(playerCount, 0);
+
+    pacer.resetSkip();
 
     for(unsigned int trickIndex = 0 ; trickIndex < trickCount ; trickIndex++)
     {
         Trick trick;
-        currentPlayer = game.getFirstPlayerOfTheRound();
 
-        cout << endl << "Trick " << (trickIndex + 1) << " of " << trickCount << endl;
+        // Whoever leads this trick: the round's opener for the first, then each
+        // trick's winner.
+        const auto leader = game.getFirstPlayerOfTheRound();
+        auto currentPlayer = leader;
 
-        for(unsigned int i = 0 ; i < game.getPlayerCount() ; i++)
+        view.phase = Phase::Playing;
+        view.trickNumber = trickIndex + 1;
+        view.leadSeat = seatOf(leader);
+        view.table.clear();
+        view.hasLeadSuit = false;
+        view.message.clear();
+
+        for(unsigned int i = 0 ; i < playerCount ; i++)
         {
+            view.activeSeat = static_cast<int>(seatOf(currentPlayer));
+
+            const bool isHuman = view.activeSeat == view.humanSeat;
+
+            refreshFromEngine(view, game, openingSeat);
+
+            // The human's own frame is drawn by their move provider, complete
+            // with the prompt; drawing one here first would only flicker.
+            if(!isHuman)
+            {
+                view.hint = currentPlayer->getName() + " is thinking...";
+                renderer.drawFrame(view);
+                pacer.beat();
+            }
+
             Card* trump = game.getCurrentTrumpCard();
-            const Suit* leadSuit = trick.getPlayedCards().empty() ? nullptr : &trick.getLeadSuit();
+            const Suit* leadSuit = trick.hasLeadSuit() ? &trick.getLeadSuit() : nullptr;
             Card* playedCard = currentPlayer->playCard(trump, leadSuit);
 
-            if(trick.getPlayedCards().empty())
+            // Contractually possible: a move provider returns nullptr when it
+            // has no legal play. It should not be reachable, since a player
+            // holding cards always has at least one legal one - so say so
+            // loudly rather than dereferencing null or playing on regardless.
+            if(playedCard == nullptr)
+                throw std::runtime_error(currentPlayer->getName() + " had no legal card to play.");
+
+            if(!trick.hasLeadSuit())
                 trick.setLeadSuit(playedCard->suit);
 
             trick.addPlayedCard(playedCard);
-            cout << currentPlayer->getName() << " plays " << playedCard->toString() << endl;
+
+            view.hasLeadSuit = true;
+            view.leadSuit = trick.getLeadSuit();
+            view.table.push_back({ static_cast<unsigned int>(view.activeSeat), *playedCard, false });
+
+            markCurrentlyWinning(trick, leader);
+
+            view.hint.clear();
+            refreshFromEngine(view, game, openingSeat);
+            renderer.drawFrame(view);
+
+            // The human's own card needs no pause: the time they spent choosing
+            // it already served as one, and the next bot's beat gives the card a
+            // moment on screen before another lands on top of it.
+            if(!isHuman)
+                pacer.beat();
 
             currentPlayer = game.getNextPlayer(currentPlayer);
         }
 
-        auto winner = game.determineTrickWinner(trick, game.getFirstPlayerOfTheRound());
+        const auto winner = game.determineTrickWinner(trick, leader);
         trick.setWinner(winner);
         game.addTrickToCurrentRound(trick);
         game.setFirstPlayerOfTheRound(winner);
 
-        // Track tricks won
-        tricksWon[winner->getName()]++;
-        
-        cout << winner->getName() << " wins the trick." << endl;
-    }
-    
-    // Set the results for each player
-    currentPlayer = firstPlayer;
-    for(unsigned int i = 0 ; i < game.getPlayerCount() ; i++)
-    {
-        unsigned int wonTricks = tricksWon[currentPlayer->getName()];
-        game.setResult(currentPlayer, wonTricks);
-        currentPlayer = game.getNextPlayer(currentPlayer);
+        const unsigned int winnerSeat = seatOf(winner);
+        tricksWon[winnerSeat]++;
+
+        // Pushed back every trick rather than once at the end of the round, so
+        // the "won" column reads the engine's own numbers as they happen.
+        game.setResult(winner, tricksWon[winnerSeat]);
+
+        view.phase = Phase::TrickEnd;
+        view.activeSeat = -1;
+        view.message = winner->getName() + " wins the trick.";
+        refreshFromEngine(view, game, openingSeat);
+        const bool moreTricks = trickIndex + 1 < trickCount;
+        renderer.drawFrame(view, moreTricks ? "Press Enter for the next trick" : "");
+
+        if(moreTricks)
+            pacer.trickPause();
     }
 }
 
-void TerminalRomanianWhist::displayScoreboard()
+void TerminalRomanianWhist::markCurrentlyWinning(const Trick& trick, PlayerList::iterator leader)
 {
-    cout << "\n=========================" << endl;
-    cout << "SCOREBOARD" << endl;
-    cout << "=========================" << endl;
-    cout << left << setw(20) << "Player" << setw(15) << "Round Score" << setw(15) << "Total Score" << endl;
-    cout << "--------------------------------------------------------" << endl;
-    
-    auto roundScores = game.getPlayerRoundScores();
-    
-    for(const auto& [name, scores] : roundScores)
-    {
-        cout << left << setw(20) << name 
-             << setw(15) << scores.first 
-             << setw(15) << scores.second << endl;
-    }
-    cout << "=========================" << endl;
+    // Asking the engine rather than reimplementing the ranking here means the
+    // highlight can never disagree with the winner it eventually declares. It
+    // copes with a partly played trick: it ranks whatever has been played.
+    const auto leadingPlayer = game.determineTrickWinner(trick, leader);
+    const unsigned int leadingSeat = seatOf(leadingPlayer);
 
-    // Show current leader (using the projected totals just printed above,
-    // since committed totals aren't updated until after this is displayed)
-    auto leader = std::max_element(roundScores.begin(), roundScores.end(),
-        [](const auto& a, const auto& b) { return a.second.second < b.second.second; });
-    if(leader != roundScores.end())
-    {
-        cout << "Current leader: " << leader->first << " with " << leader->second.second << " points" << endl;
-    }
-    cout << "=========================" << endl;
+    for(PlayedCardView& played : view.table)
+        played.isWinning = played.seatIndex == leadingSeat;
 }
-
-void TerminalRomanianWhist::displayFinalResults()
-{
-    cout << "\n=========================" << endl;
-    cout << "FINAL RESULTS" << endl;
-    cout << "=========================" << endl;
-    cout << left << setw(20) << "Player" << setw(15) << "Total Score" << endl;
-    cout << "--------------------------------------------------------" << endl;
-    
-    auto playerScores = game.getPlayerScores();
-    
-    for(const auto& [name, score] : playerScores)
-    {
-        cout << left << setw(20) << name << setw(15) << score << endl;
-    }
-    cout << "=========================" << endl;
-    
-    if(!playerScores.empty())
-    {
-        cout << "🏆 WINNER: " << playerScores[0].first << " with " << playerScores[0].second << " points! 🏆" << endl;
-    }
-    cout << "=========================" << endl;
-}
-

@@ -1,90 +1,121 @@
 #include "ConsoleMoveProvider.h"
 
+#include "Input.h"
+
 #include <romanian_whist/CardValidator.h>
 
-#include <iostream>
-#include <limits>
-#include <stdexcept>
+#include <algorithm>
 #include <string>
 
 using romanian_whist::Card;
 using romanian_whist::CardValidator;
 using romanian_whist::Suit;
 
-namespace
+ConsoleMoveProvider::ConsoleMoveProvider(UiContext& _ui) : ui(_ui)
+{}
+
+void ConsoleMoveProvider::redraw(const std::string& prompt, const std::string& error) const
 {
-
-// Reads an integer in [0, maxValid] from stdin, re-prompting until one arrives.
-//
-// `value` must be initialised: at end-of-file operator>> fails while constructing
-// its sentry, which returns without ever writing to the target. Reading an
-// uninitialised int there would be undefined behaviour.
-//
-// Malformed input is recoverable (clear the failure, discard the offending line).
-// EOF is not: no further input can ever arrive, so re-prompting would spin
-// forever. It propagates as an exception for main() to report.
-int readChoice(int maxValid, const std::string& prompt)
-{
-    int value = 0;
-
-    while(true)
-    {
-        if(std::cin >> value)
-        {
-            if(value >= 0 && value <= maxValid)
-                return value;
-        }
-        else
-        {
-            if(std::cin.eof())
-                throw std::runtime_error("Input closed while awaiting a choice.");
-
-            std::cin.clear();
-            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        }
-
-        std::cout << prompt;
-    }
+    ui.view.error = error;
+    ui.renderer.drawFrame(ui.view, prompt);
 }
 
-} // namespace
+std::vector<Card*> ConsoleMoveProvider::layOutHand(const std::vector<Card*>& hand,
+                                                   const std::vector<Card*>& legalCards,
+                                                   Card* trump) const
+{
+    std::vector<const Card*> ordered(hand.begin(), hand.end());
+    CardFormat::sortForDisplay(ordered, trump);
+
+    std::vector<Card*> choices;
+
+    ui.view.hand.clear();
+    ui.view.hand.reserve(ordered.size());
+
+    // No candidates means nothing is being chosen - the bidding screen just
+    // shows the hand - so no card is greyed out and none gets a number.
+    const bool choosing = !legalCards.empty();
+
+    for(const Card* card : ordered)
+    {
+        // Compare by pointer: identity is what the engine keys on when it
+        // removes the played card from the hand.
+        const bool legal = !choosing ||
+                           std::find(legalCards.begin(), legalCards.end(), card) != legalCards.end();
+
+        HandEntry entry;
+        entry.card = *card;
+        entry.legal = legal;
+
+        if(choosing && legal)
+        {
+            choices.push_back(const_cast<Card*>(card));
+            entry.choice = static_cast<unsigned int>(choices.size());
+        }
+
+        ui.view.hand.push_back(entry);
+    }
+
+    ui.view.legalCount = static_cast<unsigned int>(choices.size());
+
+    return choices;
+}
 
 unsigned int ConsoleMoveProvider::makeBet(const std::vector<Card*>& hand, Card* trump, bool isFirstPlayer)
 {
+    (void)isFirstPlayer;
+
+    // Every card is shown, none numbered: this is the bidding screen, and the
+    // player is choosing a number of tricks rather than a card. Seeing the hand
+    // here at all is the point - the bid used to be asked for blind.
+    layOutHand(hand, {}, trump);
+
+    ui.view.hint.clear();
+
     const int maxBet = static_cast<int>(hand.size());
+    const std::string prompt = "How many tricks will you win? (0-" + std::to_string(maxBet) + "): ";
 
-    std::cout << "Enter bet (0-" << maxBet << "): ";
+    redraw(prompt, "");
 
-    return static_cast<unsigned int>(
-        readChoice(maxBet, "Invalid bet. Enter a number between 0 and " +
-                           std::to_string(maxBet) + ": "));
+    const int bet = Input::readChoice(0, maxBet,
+        [this, &prompt](const std::string& error) { redraw(prompt, error); });
+
+    ui.view.error.clear();
+
+    return static_cast<unsigned int>(bet);
 }
 
 Card* ConsoleMoveProvider::playCard(const std::vector<Card*>& hand, Card* trump, const Suit* leadSuit)
 {
     CardValidator cardValidator;
-    std::vector<Card*> legalCards = cardValidator.getLegalCards(hand, trump, leadSuit);
+    const std::vector<Card*> legalCards = cardValidator.getLegalCards(hand, trump, leadSuit);
 
     // No legal play. Returning nullptr matches what the engine's own strategies
-    // do; prompting would be impossible since no index could ever be valid.
+    // do; prompting would be impossible since no number could ever be valid.
     if(legalCards.empty())
         return nullptr;
 
-    std::cout << "Your hand:" << std::endl;
-    for(Card* card : hand)
-        std::cout << "  " << card->toString() << std::endl;
+    const std::vector<Card*> choices = layOutHand(hand, legalCards, trump);
 
-    std::cout << "Legal plays:" << std::endl;
-    for(std::size_t i = 0 ; i < legalCards.size() ; i++)
-        std::cout << i << ") " << legalCards[i]->toString() << std::endl;
+    if(leadSuit != nullptr && choices.size() < hand.size())
+        ui.view.hint = "you must follow " + ui.cardFormat.suitGlyph(*leadSuit);
+    else if(leadSuit == nullptr)
+        ui.view.hint = "you lead";
+    else
+        ui.view.hint.clear();
 
-    const int maxIndex = static_cast<int>(legalCards.size()) - 1;
+    const int highest = static_cast<int>(choices.size());
+    const std::string prompt = highest == 1
+        ? std::string("Only one card can be played. Press 1: ")
+        : "Which card? (1-" + std::to_string(highest) + "): ";
 
-    std::cout << "Choose a card (0-" << maxIndex << "): ";
+    redraw(prompt, "");
 
-    const int choice = readChoice(maxIndex,
-                                  "Invalid choice. Enter a number between 0 and " +
-                                  std::to_string(maxIndex) + ": ");
+    const int choice = Input::readChoice(1, highest,
+        [this, &prompt](const std::string& error) { redraw(prompt, error); });
 
-    return legalCards[static_cast<std::size_t>(choice)];
+    ui.view.error.clear();
+    ui.view.hint.clear();
+
+    return choices[static_cast<std::size_t>(choice) - 1];
 }
