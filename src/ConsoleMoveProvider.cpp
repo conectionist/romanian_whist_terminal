@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <string>
 
+using romanian_whist::BetContext;
 using romanian_whist::Card;
 using romanian_whist::CardValidator;
 using romanian_whist::Suit;
@@ -61,28 +62,45 @@ std::vector<Card*> ConsoleMoveProvider::layOutHand(const std::vector<Card*>& han
     return choices;
 }
 
-unsigned int ConsoleMoveProvider::makeBet(const std::vector<Card*>& hand, Card* trump, bool isFirstPlayer)
+unsigned int ConsoleMoveProvider::makeBet(const BetContext& context)
 {
-    (void)isFirstPlayer;
-
     // Every card is shown, none numbered: this is the bidding screen, and the
     // player is choosing a number of tricks rather than a card. Seeing the hand
     // here at all is the point - the bid used to be asked for blind.
-    layOutHand(hand, {}, trump);
+    layOutHand(context.hand, {}, context.trump);
 
-    ui.view.hint.clear();
-
-    const int maxBet = static_cast<int>(hand.size());
+    const int maxBet = static_cast<int>(context.hand.size());
     const std::string prompt = "How many tricks will you win? (0-" + std::to_string(maxBet) + "): ";
+
+    // Say which number is barred before it is typed, not only after. Bidding
+    // last is the only time this happens, and the player has no other way to
+    // know the rule is about to bite.
+    if(context.forbiddenBet)
+        ui.view.hint = "you bid last - " + std::to_string(*context.forbiddenBet) + " is not allowed";
+    else
+        ui.view.hint.clear();
 
     redraw(prompt, "");
 
-    const int bet = Input::readChoice(0, maxBet,
-        [this, &prompt](const std::string& error) { redraw(prompt, error); });
+    const auto redrawPrompt = [this, &prompt](const std::string& error) { redraw(prompt, error); };
 
-    ui.view.error.clear();
+    // readChoice only understands a contiguous range, so the one barred value
+    // is caught out here and the question asked again.
+    while(true)
+    {
+        const int bet = Input::readChoice(0, maxBet, redrawPrompt);
 
-    return static_cast<unsigned int>(bet);
+        if(!context.forbiddenBet || static_cast<unsigned int>(bet) != *context.forbiddenBet)
+        {
+            ui.view.error.clear();
+            ui.view.hint.clear();
+
+            return static_cast<unsigned int>(bet);
+        }
+
+        redrawPrompt("Bidding " + std::to_string(bet) + " would make the bids add up to " +
+                     std::to_string(maxBet) + ". Pick another number.");
+    }
 }
 
 Card* ConsoleMoveProvider::playCard(const std::vector<Card*>& hand, Card* trump, const Suit* leadSuit)

@@ -98,7 +98,12 @@ void TerminalRomanianWhist::loop()
             if(!isHuman)
                 renderer.drawFrame(view);
 
-            const unsigned int bet = currentPlayer->getBet(game.getCurrentTrumpCard(), i == 0);
+            // Asked fresh each time round: it only names a bid once everyone
+            // but the last player has bid, and only while a bid could still
+            // make the round add up exactly.
+            const unsigned int bet = currentPlayer->getBet(game.getCurrentTrumpCard(),
+                                                           i == 0,
+                                                           game.getForbiddenBet());
             game.placeBet(currentPlayer, bet);
 
             if(!isHuman)
@@ -110,6 +115,14 @@ void TerminalRomanianWhist::loop()
 
             currentPlayer = game.getNextPlayer(currentPlayer);
         }
+
+        // Hold on the completed bid table before the first card goes down.
+        // Without this the last bid is only ever seen when an AI made it, and
+        // the human never gets to read what the table has committed to.
+        view.activeSeat = -1;
+        refreshFromEngine(view, game, openingSeat);
+        renderer.drawFrame(view);
+        pacer.beat();
 
         // Seed every seat's result. setResult assigns rather than accumulates,
         // so the per-trick updates that follow keep it live - but a player who
