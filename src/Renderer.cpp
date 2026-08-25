@@ -141,7 +141,8 @@ void Renderer::appendHeader(std::string& out, const GameView& view) const
                           "/" + std::to_string(view.roundCount);
 
     std::string body = " " + title + "     " + details +
-                       "     Joc de " + std::to_string(view.trickCount) +
+                       "     " + std::to_string(view.trickCount) +
+                       (view.trickCount == 1 ? " trick" : " tricks") +
                        "     " + roundTypeLabel(view.roundType);
 
     if(view.hasTrump)
