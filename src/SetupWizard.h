@@ -9,14 +9,31 @@
 #include <string>
 #include <vector>
 
+// Which strategy a bot plays with. The order is the order the setup wizard
+// offers them in, so it doubles as the menu index.
+enum class AiLevel
+{
+    Random,
+    FirstCard,
+    LowRisk,
+    Ducking
+};
+
+// Every option the wizard offers, in menu order, so the menu and the factory
+// cannot drift apart.
+inline constexpr AiLevel AiLevels[] = { AiLevel::Random,
+                                        AiLevel::FirstCard,
+                                        AiLevel::LowRisk,
+                                        AiLevel::Ducking };
+
 struct GameConfig
 {
     bool spectator = false;
     std::string humanName;
     std::vector<std::string> aiNames;
 
-    // Index into the strategy choices offered: 0 random, 1 first-legal-card.
-    std::vector<int> aiLevels;
+    // One per entry in aiNames, in the same order.
+    std::vector<AiLevel> aiLevels;
 
     romanian_whist::GameStructure structure = romanian_whist::GameStructure::S_181;
     bool endWithForeheadAndHidden = true;

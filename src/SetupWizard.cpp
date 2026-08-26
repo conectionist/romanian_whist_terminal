@@ -59,6 +59,13 @@ GameConfig SetupWizard::run() const
         GameConfig config;
         config.humanName = askName("What should we call you?", {});
 
+        // The quick game is the one most players will judge the bots on, so it
+        // seats the two that actually think, and keeps one simple bot for
+        // contrast. Ordered to match the seats they are dealt into.
+        static constexpr AiLevel QuickStartLevels[] = { AiLevel::LowRisk,
+                                                        AiLevel::Ducking,
+                                                        AiLevel::FirstCard };
+
         // Skip any stock name the player has just taken for themselves: sharing
         // a name with a bot would mean sharing its bets and its score.
         for(const std::string& name : BotNames)
@@ -68,8 +75,8 @@ GameConfig SetupWizard::run() const
 
             if(!Input::equalIgnoringCase(name, config.humanName))
             {
+                config.aiLevels.push_back(QuickStartLevels[config.aiNames.size()]);
                 config.aiNames.push_back(name);
-                config.aiLevels.push_back(0);
             }
         }
 
@@ -112,8 +119,8 @@ GameConfig SetupWizard::run() const
     for(int i = 0 ; i < botCount ; i++)
     {
         const int level = ask("How should " + config.aiNames[i] + " play?",
-                              { "Randomly", "First playable card" });
-        config.aiLevels.push_back(level - 1);
+                              { "Randomly", "First playable card", "Low risk", "Ducking tricks" });
+        config.aiLevels.push_back(AiLevels[level - 1]);
     }
 
     config.structure = ask("Which shape of game?",
@@ -137,7 +144,9 @@ GameConfig SetupWizard::demoConfig()
 
     config.spectator = true;
     config.aiNames = { "Danutz", "Mihai", "Aditz", "Fane" };
-    config.aiLevels = { 1, 1, 0, 0 };
+
+    // One of each, so the demo is also the side-by-side comparison.
+    config.aiLevels = { AiLevel::LowRisk, AiLevel::Ducking, AiLevel::FirstCard, AiLevel::Random };
     config.structure = GameStructure::S_181;
     config.endWithForeheadAndHidden = true;
     config.all1GamesAreForehead = false;

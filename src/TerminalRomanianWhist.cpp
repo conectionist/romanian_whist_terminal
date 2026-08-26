@@ -8,10 +8,29 @@
 #include "ConsoleMoveProvider.h"
 #include "Input.h"
 #include <romanian_whist/AiMoveProvider.h>
+#include <romanian_whist/strategies/DuckingStrategy.h>
 #include <romanian_whist/strategies/FirstCardStrategy.h>
+#include <romanian_whist/strategies/LowRiskStrategy.h>
 #include <romanian_whist/strategies/RandomCardStrategy.h>
 
 using namespace romanian_whist;
+
+namespace
+{
+std::unique_ptr<IStrategy> makeStrategy(AiLevel level)
+{
+    switch(level)
+    {
+        case AiLevel::FirstCard: return std::make_unique<FirstCardStrategy>();
+        case AiLevel::LowRisk:   return std::make_unique<LowRiskStrategy>();
+        case AiLevel::Ducking:   return std::make_unique<DuckingStrategy>();
+        case AiLevel::Random:    break;
+    }
+
+    return std::make_unique<RandomCardStrategy>();
+}
+
+} // namespace
 
 TerminalRomanianWhist::TerminalRomanianWhist(AppOptions& _options) : options(_options),
                                                                      terminal(options),
@@ -56,11 +75,8 @@ void TerminalRomanianWhist::applySetup(const GameConfig& config)
 
     for(std::size_t i = 0 ; i < config.aiNames.size() ; i++)
     {
-        std::unique_ptr<IStrategy> strategy = config.aiLevels[i] == 0
-            ? std::unique_ptr<IStrategy>(std::make_unique<RandomCardStrategy>())
-            : std::unique_ptr<IStrategy>(std::make_unique<FirstCardStrategy>());
-
-        game.addPlayer(config.aiNames[i], std::make_unique<AiMoveProvider>(std::move(strategy)));
+        game.addPlayer(config.aiNames[i],
+                       std::make_unique<AiMoveProvider>(makeStrategy(config.aiLevels[i])));
     }
 
     game.initializeScoreboard(config.structure,
@@ -201,7 +217,15 @@ void TerminalRomanianWhist::playCurrentRoundTricks()
 
             Card* trump = game.getCurrentTrumpCard();
             const Suit* leadSuit = trick.hasLeadSuit() ? &trick.getLeadSuit() : nullptr;
-            Card* playedCard = currentPlayer->playCard(trump, leadSuit);
+
+            // The trick so far, plus what this player owes on their bid, so a
+            // strategy can tell whether a card would actually win and whether
+            // it wants it to.
+            Card* playedCard = currentPlayer->playCard(trump,
+                                                       leadSuit,
+                                                       trick.getPlayedCards(),
+                                                       game.getCurrentRound().getBet(currentPlayer->getName()),
+                                                       tricksWon[seatOf(currentPlayer)]);
 
             // Contractually possible: a move provider returns nullptr when it
             // has no legal play. It should not be reachable, since a player
