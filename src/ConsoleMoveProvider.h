@@ -32,9 +32,7 @@ public:
 
     virtual unsigned int makeBet(const romanian_whist::BetContext& context) override;
 
-    virtual romanian_whist::Card* playCard(const std::vector<romanian_whist::Card*>& hand,
-                                           romanian_whist::Card* trump,
-                                           const romanian_whist::Suit* leadSuit) override;
+    virtual romanian_whist::Card* playCard(const romanian_whist::PlayContext& context) override;
 };
 
 #endif

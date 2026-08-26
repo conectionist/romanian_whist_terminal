@@ -10,6 +10,7 @@
 using romanian_whist::BetContext;
 using romanian_whist::Card;
 using romanian_whist::CardValidator;
+using romanian_whist::PlayContext;
 using romanian_whist::Suit;
 
 ConsoleMoveProvider::ConsoleMoveProvider(UiContext& _ui) : ui(_ui)
@@ -103,8 +104,12 @@ unsigned int ConsoleMoveProvider::makeBet(const BetContext& context)
     }
 }
 
-Card* ConsoleMoveProvider::playCard(const std::vector<Card*>& hand, Card* trump, const Suit* leadSuit)
+Card* ConsoleMoveProvider::playCard(const PlayContext& context)
 {
+    const std::vector<Card*>& hand = context.hand;
+    Card* trump = context.trump;
+    const Suit* leadSuit = context.leadSuit;
+
     CardValidator cardValidator;
     const std::vector<Card*> legalCards = cardValidator.getLegalCards(hand, trump, leadSuit);
 
