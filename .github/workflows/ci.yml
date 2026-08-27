@@ -30,6 +30,9 @@ jobs:
       - name: Build
         run: cmake --build --preset release
 
+      - name: Rename binary
+        run: mv "build-release/terminal_romanian_whist-${{ steps.version.outputs.version }}" "build-release/terminal_romanian_whist-${{ steps.version.outputs.version }}-linux"
+
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
@@ -57,6 +60,10 @@ jobs:
       - name: Build
         run: cmake --build --preset release
 
+      - name: Rename binary
+        shell: bash
+        run: mv "build-release/terminal_romanian_whist-${{ steps.version.outputs.version }}.exe" "build-release/terminal_romanian_whist-${{ steps.version.outputs.version }}-windows.exe"
+
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
@@ -83,6 +90,9 @@ jobs:
 
       - name: Build
         run: cmake --build --preset release
+
+      - name: Rename binary
+        run: mv "build-release/terminal_romanian_whist-${{ steps.version.outputs.version }}" "build-release/terminal_romanian_whist-${{ steps.version.outputs.version }}-macos"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
