@@ -102,11 +102,15 @@ GameConfig SetupWizard::run() const
     // A human takes one of the seats, so the bot count has to leave room.
     const int maximumBots = MaximumPlayers - (config.spectator ? 0 : 1);
 
+    // A spectated game has no human seat, so it needs two bots at minimum;
+    // a played one already has the human, so one bot is enough.
+    const int minimumBots = config.spectator ? 2 : 1;
+
     std::vector<std::string> countOptions;
-    for(int i = 1 ; i <= maximumBots ; i++)
+    for(int i = minimumBots ; i <= maximumBots ; i++)
         countOptions.push_back(std::to_string(i) + (i == 1 ? " bot" : " bots"));
 
-    const int botCount = ask("How many bots?", countOptions);
+    const int botCount = ask("How many bots?", countOptions) + minimumBots - 1;
 
     for(int i = 0 ; i < botCount ; i++)
     {
