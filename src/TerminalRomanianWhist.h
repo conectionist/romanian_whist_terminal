@@ -45,9 +45,7 @@ private:
     void applySetup(const GameConfig& config);
     void loop();
     void playCurrentRoundTricks();
-    void markCurrentlyWinning(const romanian_whist::Trick& trick,
-                              romanian_whist::PlayerList::iterator leader);
-    unsigned int seatOf(romanian_whist::PlayerList::const_iterator player) const;
+    void markCurrentlyWinning(const romanian_whist::Trick& trick);
 };
 
 #endif

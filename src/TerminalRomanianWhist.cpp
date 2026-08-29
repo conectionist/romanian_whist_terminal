@@ -40,21 +40,6 @@ TerminalRomanianWhist::TerminalRomanianWhist(AppOptions& _options) : options(_op
                                                                      ui{options, terminal, renderer, cardFormat, view}
 {}
 
-unsigned int TerminalRomanianWhist::seatOf(PlayerList::const_iterator player) const
-{
-    // By address, not by name: two players may share a name, and list nodes do
-    // not move.
-    const auto& players = game.getPlayers();
-
-    for(unsigned int i = 0 ; i < players.size() ; i++)
-    {
-        if(&players.at(i) == &*player)
-            return i;
-    }
-
-    return 0;
-}
-
 void TerminalRomanianWhist::startGame()
 {
     SetupWizard wizard(renderer, terminal);
@@ -97,17 +82,17 @@ void TerminalRomanianWhist::loop()
         game.shuffleDeck();
         game.dealCards();
 
-        openingSeat = seatOf(game.getCurrentRound().getOpeningPlayer());
+        openingSeat = game.getCurrentRound().getOpenerSeat().index;
 
         view.phase = Phase::Betting;
         view.message.clear();
         view.table.clear();
 
-        auto currentPlayer = game.getFirstPlayerOfTheRound();
+        Seat currentSeat = game.getRoundLeaderSeat();
 
         for(unsigned int i = 0 ; i < game.getPlayerCount() ; i++)
         {
-            view.activeSeat = static_cast<int>(seatOf(currentPlayer));
+            view.activeSeat = static_cast<int>(currentSeat.index);
             refreshFromEngine(view, game, openingSeat);
 
             const bool isHuman = view.activeSeat == view.humanSeat;
@@ -117,10 +102,10 @@ void TerminalRomanianWhist::loop()
             // Asked fresh each time round: it only names a bid once everyone
             // but the last player has bid, and only while a bid could still
             // make the round add up exactly.
-            const unsigned int bet = currentPlayer->getBet(game.getCurrentTrumpCard(),
-                                                           i == 0,
-                                                           game.getForbiddenBet());
-            game.placeBet(currentPlayer, bet);
+            const unsigned int bet = game.getPlayer(currentSeat).getBet(game.getCurrentTrumpCard(),
+                                                                        i == 0,
+                                                                        game.getForbiddenBet());
+            game.placeBet(currentSeat, bet);
 
             if(!isHuman)
             {
@@ -129,7 +114,7 @@ void TerminalRomanianWhist::loop()
                 pacer.beat();
             }
 
-            currentPlayer = game.getNextPlayer(currentPlayer);
+            currentSeat = game.getNextSeat(currentSeat);
         }
 
         // Hold on the completed bid table before the first card goes down.
@@ -139,16 +124,6 @@ void TerminalRomanianWhist::loop()
         refreshFromEngine(view, game, openingSeat);
         renderer.drawFrame(view);
         pacer.beat();
-
-        // Seed every seat's result. setResult assigns rather than accumulates,
-        // so the per-trick updates that follow keep it live - but a player who
-        // wins nothing would otherwise never be written at all.
-        currentPlayer = game.getFirstPlayerOfTheRound();
-        for(unsigned int i = 0 ; i < game.getPlayerCount() ; i++)
-        {
-            game.setResult(currentPlayer, 0);
-            currentPlayer = game.getNextPlayer(currentPlayer);
-        }
 
         playCurrentRoundTricks();
 
@@ -178,8 +153,6 @@ void TerminalRomanianWhist::playCurrentRoundTricks()
     const unsigned int trickCount = game.getCurrentRoundTrickCount();
     const unsigned int playerCount = game.getPlayerCount();
 
-    std::vector<unsigned int> tricksWon(playerCount, 0);
-
     pacer.resetSkip();
 
     for(unsigned int trickIndex = 0 ; trickIndex < trickCount ; trickIndex++)
@@ -188,19 +161,19 @@ void TerminalRomanianWhist::playCurrentRoundTricks()
 
         // Whoever leads this trick: the round's opener for the first, then each
         // trick's winner.
-        const auto leader = game.getFirstPlayerOfTheRound();
-        auto currentPlayer = leader;
+        const Seat leader = game.getRoundLeaderSeat();
+        Seat currentSeat = leader;
 
         view.phase = Phase::Playing;
         view.trickNumber = trickIndex + 1;
-        view.leadSeat = seatOf(leader);
+        view.leadSeat = leader.index;
         view.table.clear();
         view.hasLeadSuit = false;
         view.message.clear();
 
         for(unsigned int i = 0 ; i < playerCount ; i++)
         {
-            view.activeSeat = static_cast<int>(seatOf(currentPlayer));
+            view.activeSeat = static_cast<int>(currentSeat.index);
 
             const bool isHuman = view.activeSeat == view.humanSeat;
 
@@ -210,7 +183,7 @@ void TerminalRomanianWhist::playCurrentRoundTricks()
             // with the prompt; drawing one here first would only flicker.
             if(!isHuman)
             {
-                view.hint = currentPlayer->getName() + " is thinking...";
+                view.hint = game.getPlayer(currentSeat).getName() + " is thinking...";
                 renderer.drawFrame(view);
                 pacer.beat();
             }
@@ -221,29 +194,31 @@ void TerminalRomanianWhist::playCurrentRoundTricks()
             // The trick so far, plus what this player owes on their bid, so a
             // strategy can tell whether a card would actually win and whether
             // it wants it to.
-            Card* playedCard = currentPlayer->playCard(trump,
+            const Round& round = game.getCurrentRound();
+
+            Card* playedCard = game.getPlayer(currentSeat).playCard(trump,
                                                        leadSuit,
-                                                       trick.getPlayedCards(),
-                                                       game.getCurrentRound().getBet(currentPlayer->getName()),
-                                                       tricksWon[seatOf(currentPlayer)]);
+                                                       trick.cardsInPlayOrder(),
+                                                       round.getBet(currentSeat).value_or(0),
+                                                       round.getTricksWon(currentSeat));
 
             // Contractually possible: a move provider returns nullptr when it
             // has no legal play. It should not be reachable, since a player
             // holding cards always has at least one legal one - so say so
             // loudly rather than dereferencing null or playing on regardless.
             if(playedCard == nullptr)
-                throw std::runtime_error(currentPlayer->getName() + " had no legal card to play.");
+                throw std::runtime_error(game.getPlayer(currentSeat).getName() + " had no legal card to play.");
 
             if(!trick.hasLeadSuit())
                 trick.setLeadSuit(playedCard->suit);
 
-            trick.addPlayedCard(playedCard);
+            trick.addPlayedCard(currentSeat, playedCard);
 
             view.hasLeadSuit = true;
             view.leadSuit = trick.getLeadSuit();
             view.table.push_back({ static_cast<unsigned int>(view.activeSeat), *playedCard, false });
 
-            markCurrentlyWinning(trick, leader);
+            markCurrentlyWinning(trick);
 
             view.hint.clear();
             refreshFromEngine(view, game, openingSeat);
@@ -255,24 +230,21 @@ void TerminalRomanianWhist::playCurrentRoundTricks()
             if(!isHuman)
                 pacer.beat();
 
-            currentPlayer = game.getNextPlayer(currentPlayer);
+            currentSeat = game.getNextSeat(currentSeat);
         }
 
-        const auto winner = game.determineTrickWinner(trick, leader);
+        const Seat winner = game.determineTrickWinner(trick);
         trick.setWinner(winner);
+
+        // Added before the trick-end screen is drawn, so the "won" column
+        // counts this trick: the round derives every seat's total from the
+        // winners of the tricks it holds.
         game.addTrickToCurrentRound(trick);
-        game.setFirstPlayerOfTheRound(winner);
-
-        const unsigned int winnerSeat = seatOf(winner);
-        tricksWon[winnerSeat]++;
-
-        // Pushed back every trick rather than once at the end of the round, so
-        // the "won" column reads the engine's own numbers as they happen.
-        game.setResult(winner, tricksWon[winnerSeat]);
+        game.setRoundLeaderSeat(winner);
 
         view.phase = Phase::TrickEnd;
         view.activeSeat = -1;
-        view.message = winner->getName() + " wins the trick.";
+        view.message = game.getPlayers().at(winner.index).getName() + " wins the trick.";
         refreshFromEngine(view, game, openingSeat);
         const bool moreTricks = trickIndex + 1 < trickCount;
         renderer.drawFrame(view, moreTricks ? "Press Enter for the next trick"
@@ -281,14 +253,13 @@ void TerminalRomanianWhist::playCurrentRoundTricks()
     }
 }
 
-void TerminalRomanianWhist::markCurrentlyWinning(const Trick& trick, PlayerList::iterator leader)
+void TerminalRomanianWhist::markCurrentlyWinning(const Trick& trick)
 {
     // Asking the engine rather than reimplementing the ranking here means the
     // highlight can never disagree with the winner it eventually declares. It
     // copes with a partly played trick: it ranks whatever has been played.
-    const auto leadingPlayer = game.determineTrickWinner(trick, leader);
-    const unsigned int leadingSeat = seatOf(leadingPlayer);
+    const Seat leading = game.determineTrickWinner(trick);
 
     for(PlayedCardView& played : view.table)
-        played.isWinning = played.seatIndex == leadingSeat;
+        played.isWinning = played.seatIndex == leading.index;
 }

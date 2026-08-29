@@ -2,6 +2,8 @@
 
 #include "CardFormat.h"
 
+#include <optional>
+
 using romanian_whist::GameEngine;
 using romanian_whist::Round;
 
@@ -45,11 +47,13 @@ void refreshFromEngine(GameView& view, const GameEngine& game, unsigned int open
         // Bidding runs from whoever opened the round, wrapping round the table.
         seat.bidOrder = ((i + playerCount - openingSeat) % playerCount) + 1;
 
-        // getBet returns 0 both for a bid of zero and for no bid at all, so the
-        // display has to ask which it is before showing a number.
-        seat.hasBet = round.hasBet(seat.name);
-        seat.bet = seat.hasBet ? round.getBet(seat.name) : 0;
-        seat.tricksWon = round.getActual(seat.name);
+        // Disengaged until this seat has bid, which is what tells a genuine
+        // bid of zero from no bid at all.
+        const std::optional<unsigned int> bet = round.getBet(romanian_whist::Seat{i});
+
+        seat.hasBet = bet.has_value();
+        seat.bet = bet.value_or(0);
+        seat.tricksWon = round.getTricksWon(romanian_whist::Seat{i});
 
         if(seat.hasBet)
         {

@@ -111,8 +111,9 @@ struct GameView
 //
 // Leaves the caller to set what the engine does not model - which seat is
 // active, what is on the table, the human's hand layout, and any message.
-// `openingSeat` is the round's opening bidder, which the caller caches because
-// the engine's first player moves to each trick's winner as the round plays out.
+// `openingSeat` is the round's opening bidder, which the caller caches. The
+// round knows it too (Round::getOpenerSeat()), so this parameter is redundant
+// and goes when Phase 2 rebuilds the table from the engine's in-flight trick.
 void refreshFromEngine(GameView& view,
                        const romanian_whist::GameEngine& game,
                        unsigned int openingSeat);
