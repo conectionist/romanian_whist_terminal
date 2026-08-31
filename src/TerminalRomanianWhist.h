@@ -12,9 +12,13 @@
 #include "Terminal.h"
 #include "UiContext.h"
 
+#include <romanian_whist/IGameObserver.h>
 #include <romanian_whist/Trick.h>
 
-class TerminalRomanianWhist
+// The engine owns the loop now, so this is no longer a driver - it is what the
+// engine reports to. Every method below the constructor is a callback, and the
+// order they fire in is IGameObserver's contract, not this class's.
+class TerminalRomanianWhist : public romanian_whist::IGameObserver
 {
 private:
     AppOptions& options;
@@ -31,21 +35,37 @@ private:
     // the provider dying before the context it points at. Do not move it.
     romanian_whist::GameEngine game;
 
-    // Who opened this round's bidding. Cached because the engine's first player
-    // moves to each trick's winner as the round plays out, so by the time
-    // anything asks, it no longer answers this question.
-    unsigned int openingSeat = 0;
-
 public:
     explicit TerminalRomanianWhist(AppOptions& _options);
 
     void startGame();
 
+    // ---- IGameObserver ----
+    // Drawing happens here, on the game thread, and blocking in one of these is
+    // how this client paces itself and waits for Enter. See IGameObserver.h for
+    // what the engine guarantees is readable inside each.
+    void onRoundStarted(const romanian_whist::GameEngine& engine) override;
+    void onBetRequested(const romanian_whist::GameEngine& engine, romanian_whist::Seat seat) override;
+    void onBetPlaced(const romanian_whist::GameEngine& engine,
+                     romanian_whist::Seat seat,
+                     unsigned int bet) override;
+    void onBettingComplete(const romanian_whist::GameEngine& engine) override;
+    void onTrickStarted(const romanian_whist::GameEngine& engine,
+                        unsigned int trickNumber,
+                        romanian_whist::Seat leader) override;
+    void onCardRequested(const romanian_whist::GameEngine& engine, romanian_whist::Seat seat) override;
+    void onCardPlayed(const romanian_whist::GameEngine& engine,
+                      romanian_whist::Seat seat,
+                      const romanian_whist::Card& card) override;
+    void onTrickWon(const romanian_whist::GameEngine& engine,
+                    romanian_whist::Seat winner,
+                    unsigned int trickNumber) override;
+    void onRoundScored(const romanian_whist::GameEngine& engine) override;
+
 private:
     void applySetup(const GameConfig& config);
-    void loop();
-    void playCurrentRoundTricks();
-    void markCurrentlyWinning(const romanian_whist::Trick& trick);
+
+    bool isHumanSeat(romanian_whist::Seat seat) const;
 };
 
 #endif

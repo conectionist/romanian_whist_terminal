@@ -107,15 +107,13 @@ struct GameView
 };
 
 // Refills everything readable straight from the engine: seats, scores, bets,
-// streaks, hand sizes, round and trick counts, trump and round type.
+// streaks, hand sizes, round and trick counts, trump and round type - and the
+// trick on the table, which the engine now holds rather than the client
+// accumulating it card by card.
 //
-// Leaves the caller to set what the engine does not model - which seat is
-// active, what is on the table, the human's hand layout, and any message.
-// `openingSeat` is the round's opening bidder, which the caller caches. The
-// round knows it too (Round::getOpenerSeat()), so this parameter is redundant
-// and goes when Phase 2 rebuilds the table from the engine's in-flight trick.
-void refreshFromEngine(GameView& view,
-                       const romanian_whist::GameEngine& game,
-                       unsigned int openingSeat);
+// A pure function of the engine. What is left to the caller is only what the
+// engine does not model: which seat is active, the human's numbered hand
+// layout, and any message or hint.
+void refreshFromEngine(GameView& view, const romanian_whist::GameEngine& game);
 
 #endif
