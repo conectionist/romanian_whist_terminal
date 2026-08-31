@@ -465,7 +465,7 @@ void Renderer::drawQuestion(std::string_view title,
     terminal.write(frame);
 }
 
-void Renderer::drawGameOver(const std::vector<std::pair<std::string, int>>& standings) const
+void Renderer::drawGameOver(const std::vector<romanian_whist::Standing>& standings) const
 {
     std::string frame;
 
@@ -478,11 +478,11 @@ void Renderer::drawGameOver(const std::vector<std::pair<std::string, int>>& stan
     frame += boxCorner(false, true) + horizontalLine(RuleWidth) + boxCorner(false, false) + "\n\n";
 
     unsigned int place = 1;
-    for(const auto& [name, score] : standings)
+    for(const romanian_whist::Standing& standing : standings)
     {
         const std::string row = "    " + pad(std::to_string(place) + ".", 4) +
-                                pad(name, NameWidth) +
-                                pad(std::to_string(score), TotalWidth, true) + " points";
+                                pad(standing.name, NameWidth) +
+                                pad(std::to_string(standing.score), TotalWidth, true) + " points";
 
         frame += (place == 1 ? terminal.paint(row, Terminal::Color::Yellow, true) : row);
         frame += "\n";
@@ -492,8 +492,8 @@ void Renderer::drawGameOver(const std::vector<std::pair<std::string, int>>& stan
     if(!standings.empty())
     {
         frame += "\n    " +
-                 terminal.paint(standings[0].first + " wins with " +
-                                std::to_string(standings[0].second) + " points.",
+                 terminal.paint(standings[0].name + " wins with " +
+                                std::to_string(standings[0].score) + " points.",
                                 Terminal::Color::Green, true);
         frame += "\n";
     }

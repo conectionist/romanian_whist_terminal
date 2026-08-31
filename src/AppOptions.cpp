@@ -5,6 +5,7 @@
 #include <cerrno>
 #include <cstdlib>
 #include <cstring>
+#include <limits>
 #include <string>
 
 #ifdef _WIN32
@@ -98,6 +99,45 @@ bool parseDelayFlag(const char* argument, const char* prefix, long& valueOut)
     return true;
 }
 
+// Returns false if the argument is not "--seed=<integer in 0..2^32-1>".
+//
+// Deliberately not folded into parseDelayFlag: that one clamps a value it
+// cannot use and this one rejects it, because a seed the caller did not ask for
+// would replay the wrong game silently, which is the one thing the flag exists
+// to rule out.
+bool parseSeedFlag(const char* argument, std::optional<std::uint32_t>& valueOut)
+{
+    constexpr const char* Prefix = "--seed=";
+
+    const std::size_t prefixLength = std::strlen(Prefix);
+    if(std::strncmp(argument, Prefix, prefixLength) != 0)
+        return false;
+
+    const char* text = argument + prefixLength;
+    if(*text == '\0')
+        return false;
+
+    // strtoull wraps a leading sign rather than rejecting it, so "--seed=-1"
+    // would otherwise parse as 2^64-1 and then fail the range check below with
+    // a confusing message instead of being read as the typo it is.
+    if(*text == '-' || *text == '+')
+        return false;
+
+    errno = 0;
+
+    char* end = nullptr;
+    const unsigned long long parsed = std::strtoull(text, &end, 10);
+
+    if(end == text || *end != '\0' || errno == ERANGE)
+        return false;
+
+    if(parsed > std::numeric_limits<std::uint32_t>::max())
+        return false;
+
+    valueOut = static_cast<std::uint32_t>(parsed);
+    return true;
+}
+
 } // namespace
 
 bool AppOptions::fromCommandLine(int argc,
@@ -166,6 +206,10 @@ bool AppOptions::fromCommandLine(int argc,
             options.demo = true;
         else if(parseDelayFlag(argument, "--delay=", parsedDelay))
             delayOverride = parsedDelay;
+        else if(parseSeedFlag(argument, options.seed))
+        {
+            // parseSeedFlag has already written options.seed.
+        }
         else
         {
             errorOut = std::string("Unrecognised option: ") + argument +
@@ -208,6 +252,7 @@ std::string AppOptions::helpText()
         "\n"
         "Other:\n"
         "  --demo            Skip setup and watch four bots play\n"
+        "  --seed=<n>        Replay the same deal and the same bot choices\n"
         "  -h, --help        Show this help\n"
         "  -v, --version     Show version information\n"
         "\n"

@@ -63,7 +63,10 @@ public:
     void onRoundScored(const romanian_whist::GameEngine& engine) override;
 
 private:
-    void applySetup(const GameConfig& config);
+    // Builds the engine's setup from the wizard's answers. It touches the
+    // engine only through start(), so the seats do not exist until then - but
+    // it is still what decides view.humanSeat, which nothing else sets.
+    romanian_whist::GameSetup buildSetup(const GameConfig& config);
 
     bool isHumanSeat(romanian_whist::Seat seat) const;
 };

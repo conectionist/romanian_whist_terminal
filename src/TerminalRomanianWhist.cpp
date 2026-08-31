@@ -1,5 +1,7 @@
 #include "TerminalRomanianWhist.h"
 
+#include <cstdint>
+#include <optional>
 #include <stdexcept>
 
 
@@ -17,7 +19,12 @@ using namespace romanian_whist;
 
 namespace
 {
-std::unique_ptr<IStrategy> makeStrategy(AiLevel level)
+// `seed` is unset unless --seed was given. Only RandomCardStrategy reads it -
+// the other three are deterministic already - but it is offset per seat so that
+// two random bots in the same game do not draw the identical stream.
+std::unique_ptr<IStrategy> makeStrategy(AiLevel level,
+                                        const std::optional<std::uint32_t>& seed,
+                                        std::size_t seatIndex)
 {
     switch(level)
     {
@@ -26,6 +33,9 @@ std::unique_ptr<IStrategy> makeStrategy(AiLevel level)
         case AiLevel::Ducking:   return std::make_unique<DuckingStrategy>();
         case AiLevel::Random:    break;
     }
+
+    if(seed)
+        return std::make_unique<RandomCardStrategy>(*seed + static_cast<std::uint32_t>(seatIndex));
 
     return std::make_unique<RandomCardStrategy>();
 }
@@ -40,41 +50,47 @@ TerminalRomanianWhist::TerminalRomanianWhist(AppOptions& _options) : options(_op
                                                                      ui{options, terminal, renderer, cardFormat, view}
 {}
 
-void TerminalRomanianWhist::applySetup(const GameConfig& config)
+GameSetup TerminalRomanianWhist::buildSetup(const GameConfig& config)
 {
+    GameSetup setup;
+
     if(!config.spectator)
     {
         // Seated first, so seat 0 is the human whenever there is one.
-        game.addPlayer(config.humanName, std::make_unique<ConsoleMoveProvider>(ui));
+        setup.seats.push_back(SeatSetup{ config.humanName,
+                                         std::make_unique<ConsoleMoveProvider>(ui) });
         view.humanSeat = 0;
     }
 
     for(std::size_t i = 0 ; i < config.aiNames.size() ; i++)
     {
-        game.addPlayer(config.aiNames[i],
-                       std::make_unique<AiMoveProvider>(makeStrategy(config.aiLevels[i])));
+        setup.seats.push_back(
+            SeatSetup{ config.aiNames[i],
+                       std::make_unique<AiMoveProvider>(
+                           makeStrategy(config.aiLevels[i], options.seed, i)) });
     }
 
-    game.initializeScoreboard(config.structure,
-                              config.endWithForeheadAndHidden,
-                              config.all1GamesAreForehead);
+    setup.structure = config.structure;
+    setup.endWithForeheadAndHidden = config.endWithForeheadAndHidden;
+    setup.all1GamesAreForehead = config.all1GamesAreForehead;
+    setup.shuffleSeed = options.seed;
 
-    game.initializeDeck(game.getPlayerCount());
+    return setup;
 }
 
 void TerminalRomanianWhist::startGame()
 {
     SetupWizard wizard(renderer, terminal);
 
-    applySetup(options.demo ? SetupWizard::demoConfig() : wizard.run());
+    GameSetup setup = buildSetup(options.demo ? SetupWizard::demoConfig() : wizard.run());
 
     game.addObserver(this);
     pacer.setHumanIsPlaying(view.humanSeat >= 0);
 
-    // Still the client's job to start the game for one more phase; Phase 3
-    // folds this into GameEngine::start(). It is also what fires
-    // onGameStarted(), so the observer has to be registered before it.
-    game.setStatus(GameStatus::InProgress);
+    // Seats the table, lays out the schedule, builds the deck and starts the
+    // game - and fires onGameStarted() on the way out, which is why the observer
+    // is registered above it.
+    game.start(std::move(setup));
 
     // Everything that used to be loop() and playCurrentRoundTricks(). The
     // callbacks below are called from inside here, on this thread.
@@ -83,7 +99,7 @@ void TerminalRomanianWhist::startGame()
     // Off the alternate screen first, so the result is still there after the
     // program exits.
     terminal.leaveAltScreen();
-    renderer.drawGameOver(game.getPlayerScores());
+    renderer.drawGameOver(game.getStandings());
 }
 
 bool TerminalRomanianWhist::isHumanSeat(Seat seat) const

@@ -5,6 +5,8 @@
 #include "GameView.h"
 #include "Terminal.h"
 
+#include <romanian_whist/GameEngine.h>
+
 #include <string>
 #include <string_view>
 #include <utility>
@@ -33,7 +35,7 @@ public:
 
     // Drawn after leaving the alternate screen so the result survives in
     // scrollback once the program exits.
-    void drawGameOver(const std::vector<std::pair<std::string, int>>& standings) const;
+    void drawGameOver(const std::vector<romanian_whist::Standing>& standings) const;
 
 private:
     void appendHeader(std::string& out, const GameView& view) const;

@@ -2,6 +2,8 @@
 #define APP_OPTIONS_H
 
 #include <chrono>
+#include <cstdint>
+#include <optional>
 #include <string>
 
 // How the interface is allowed to draw itself, and how fast it plays.
@@ -22,6 +24,13 @@ struct AppOptions
 
     std::chrono::milliseconds playDelay{700};   // between one bot's play and the next
     std::chrono::milliseconds trickDwell{1200}; // how long a finished trick sits on screen
+
+    // Set to replay the same game. It seeds the deal and every bot that draws
+    // randomly, which together are the only sources of chance in a spectated
+    // game - so `--demo --no-animate --seed=N` prints the same transcript every
+    // time, and two builds can be diffed against each other. Unset means both
+    // seed themselves from std::random_device.
+    std::optional<std::uint32_t> seed;
 
     // Returns false and fills errorOut on a malformed flag. `helpRequested` and
     // `versionRequested` are handled by the caller, which prints and exits.
