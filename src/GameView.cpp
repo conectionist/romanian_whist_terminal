@@ -104,8 +104,8 @@ void refreshFromEngine(GameView& view, const GameEngine& game)
         }
 
         seat.cardsLeft = static_cast<unsigned int>(player.getHand().size());
-        seat.roundScore = player.getCurrentRoundScore();
-        seat.totalScore = player.getTotalScore();
+        seat.roundScore = game.getRoundScore(romanian_whist::Seat{i});
+        seat.totalScore = game.getTotalScore(romanian_whist::Seat{i});
         seat.winStreak = player.getConsecutiveWins();
         seat.lossStreak = player.getConsecutiveLosses();
     }
