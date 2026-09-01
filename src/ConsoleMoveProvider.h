@@ -19,9 +19,8 @@ private:
     UiContext& ui;
 
     // Lays the hand out sorted and grouped, numbering only the cards that can
-    // legally be played, and returns what each number maps to. The pointers are
-    // the hand's own, which matters: the engine removes the played card by
-    // identity.
+    // legally be played, and returns what each number maps to.
+    //
     // Fills view.hand in display order and returns the HAND POSITIONS of the
     // cards the player may actually choose, in the order they were numbered on
     // screen - so the number typed at the prompt indexes the returned vector,
