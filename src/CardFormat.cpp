@@ -1,6 +1,7 @@
 #include "CardFormat.h"
 
 #include <algorithm>
+#include <optional>
 
 using romanian_whist::Card;
 using romanian_whist::Rank;
@@ -13,9 +14,9 @@ namespace
 // neighbouring groups from blurring together.
 constexpr Suit SuitOrder[] = { Suit::Spades, Suit::Hearts, Suit::Clubs, Suit::Diamonds };
 
-unsigned int suitPosition(Suit suit, const Card* trump)
+unsigned int suitPosition(Suit suit, const std::optional<Card>& trump)
 {
-    if(trump != nullptr && suit == trump->suit)
+    if(trump && suit == trump->suit)
         return 0;
 
     for(unsigned int i = 0 ; i < 4 ; i++)
@@ -119,17 +120,20 @@ unsigned int CardFormat::cardWidth(const Card& card)
     return card.rank == Rank::Ten ? 3 : 2;
 }
 
-void CardFormat::sortForDisplay(std::vector<const Card*>& cards, const Card* trump)
+bool CardFormat::inDisplayOrder(const Card& left, const Card& right, const std::optional<Card>& trump)
+{
+    const unsigned int leftSuit = suitPosition(left.suit, trump);
+    const unsigned int rightSuit = suitPosition(right.suit, trump);
+
+    if(leftSuit != rightSuit)
+        return leftSuit < rightSuit;
+
+    return static_cast<int>(left.rank) > static_cast<int>(right.rank);
+}
+
+void CardFormat::sortForDisplay(std::vector<Card>& cards, const std::optional<Card>& trump)
 {
     std::sort(cards.begin(), cards.end(),
-        [trump](const Card* left, const Card* right)
-        {
-            const unsigned int leftSuit = suitPosition(left->suit, trump);
-            const unsigned int rightSuit = suitPosition(right->suit, trump);
-
-            if(leftSuit != rightSuit)
-                return leftSuit < rightSuit;
-
-            return static_cast<int>(left->rank) > static_cast<int>(right->rank);
-        });
+        [&trump](const Card& left, const Card& right)
+        { return inDisplayOrder(left, right, trump); });
 }
