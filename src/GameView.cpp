@@ -1,5 +1,7 @@
 #include "GameView.h"
 
+#include "HandLayout.h"
+
 #include "CardFormat.h"
 
 #include <optional>
@@ -124,16 +126,10 @@ void refreshFromEngine(GameView& view, const GameEngine& game)
     if(view.humanSeat < 0)
         return;
 
-    std::vector<romanian_whist::Card> ordered =
-        players.at(static_cast<std::size_t>(view.humanSeat)).getHand();
-
-    CardFormat::sortForDisplay(ordered, trump);
-
-    for(const romanian_whist::Card& card : ordered)
-    {
-        HandEntry entry;
-        entry.card = card;
-        entry.legal = true;
-        view.hand.push_back(entry);
-    }
+    // The same layout the move provider draws, asked for with no legal set -
+    // which is what says "nothing is being chosen here", so every card reads as
+    // legal and none is numbered. legalCount stays 0 for the same reason.
+    view.hand = layOutHand(players.at(static_cast<std::size_t>(view.humanSeat)).getHand(),
+                           {},
+                           trump).entries;
 }

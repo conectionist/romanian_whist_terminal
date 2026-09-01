@@ -1,5 +1,6 @@
 #include "ConsoleMoveProvider.h"
 
+#include "HandLayout.h"
 #include "Input.h"
 
 #include <romanian_whist/CardValidator.h>
@@ -28,51 +29,15 @@ std::vector<std::size_t> ConsoleMoveProvider::layOutHand(const std::vector<Card>
                                                         const std::vector<Card>& legalCards,
                                                         const std::optional<Card>& trump) const
 {
-    // Positions rather than cards, sorted into display order. The extra
-    // indirection is the price of the engine wanting a hand index back: sorting
-    // the cards themselves would lose the only thing that can be translated
-    // into one.
-    std::vector<std::size_t> ordered(hand.size());
-    for(std::size_t i = 0 ; i < hand.size() ; i++)
-        ordered[i] = i;
+    // The layout itself is a pure function of the hand - see HandLayout.h for
+    // the three orderings it reconciles. All this adds is putting the result on
+    // screen, which keeps every write to the view in one place.
+    HandLayout layout = ::layOutHand(hand, legalCards, trump);
 
-    std::sort(ordered.begin(), ordered.end(),
-        [&hand, &trump](std::size_t left, std::size_t right)
-        { return CardFormat::inDisplayOrder(hand[left], hand[right], trump); });
+    ui.view.hand = std::move(layout.entries);
+    ui.view.legalCount = static_cast<unsigned int>(layout.choices.size());
 
-    std::vector<std::size_t> choices;
-
-    ui.view.hand.clear();
-    ui.view.hand.reserve(ordered.size());
-
-    // No candidates means nothing is being chosen - the bidding screen just
-    // shows the hand - so no card is greyed out and none gets a number.
-    const bool choosing = !legalCards.empty();
-
-    for(const std::size_t position : ordered)
-    {
-        const Card& card = hand[position];
-
-        // By value: a deck holds no duplicates, so equality is identity here.
-        const bool legal = !choosing ||
-                           std::find(legalCards.begin(), legalCards.end(), card) != legalCards.end();
-
-        HandEntry entry;
-        entry.card = card;
-        entry.legal = legal;
-
-        if(choosing && legal)
-        {
-            choices.push_back(position);
-            entry.choice = static_cast<unsigned int>(choices.size());
-        }
-
-        ui.view.hand.push_back(entry);
-    }
-
-    ui.view.legalCount = static_cast<unsigned int>(choices.size());
-
-    return choices;
+    return std::move(layout.choices);
 }
 
 unsigned int ConsoleMoveProvider::makeBet(const BetContext& context)
