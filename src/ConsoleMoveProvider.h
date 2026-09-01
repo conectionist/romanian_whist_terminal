@@ -5,6 +5,8 @@
 
 #include <romanian_whist/IMoveProvider.h>
 
+#include <cstddef>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -20,9 +22,18 @@ private:
     // legally be played, and returns what each number maps to. The pointers are
     // the hand's own, which matters: the engine removes the played card by
     // identity.
-    std::vector<romanian_whist::Card*> layOutHand(const std::vector<romanian_whist::Card*>& hand,
-                                                  const std::vector<romanian_whist::Card*>& legalCards,
-                                                  romanian_whist::Card* trump) const;
+    // Fills view.hand in display order and returns the HAND POSITIONS of the
+    // cards the player may actually choose, in the order they were numbered on
+    // screen - so the number typed at the prompt indexes the returned vector,
+    // and the value found there is what the engine wants back.
+    //
+    // Three orderings meet here and none of them coincide: the hand as the
+    // engine holds it, the display order, and the legal subset the numbering
+    // runs over. Carrying positions rather than cards is what keeps the last of
+    // those translatable back to the first.
+    std::vector<std::size_t> layOutHand(const std::vector<romanian_whist::Card>& hand,
+                                        const std::vector<romanian_whist::Card>& legalCards,
+                                        const std::optional<romanian_whist::Card>& trump) const;
 
     void redraw(const std::string& prompt, const std::string& error) const;
 
@@ -32,7 +43,7 @@ public:
 
     virtual unsigned int makeBet(const romanian_whist::BetContext& context) override;
 
-    virtual romanian_whist::Card* playCard(const romanian_whist::PlayContext& context) override;
+    virtual std::optional<std::size_t> playCard(const romanian_whist::PlayContext& context) override;
 };
 
 #endif

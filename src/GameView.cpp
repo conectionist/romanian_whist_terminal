@@ -28,7 +28,7 @@ void rebuildTable(GameView& view, const GameEngine& game)
     view.table.clear();
 
     for(const romanian_whist::PlayedCard& entry : played)
-        view.table.push_back({ entry.seat.index, *entry.card, false });
+        view.table.push_back({ entry.seat.index, entry.card, false });
 
     // Who is winning, asked of the engine rather than reimplemented here, so
     // the highlight can never disagree with the winner it eventually declares.
@@ -65,9 +65,9 @@ void refreshFromEngine(GameView& view, const GameEngine& game)
     view.trickCount = game.getCurrentRoundTrickCount();
     view.roundType = game.getCurrentRoundType();
 
-    const romanian_whist::Card* trump = game.getCurrentTrumpCard();
-    view.hasTrump = trump != nullptr;
-    if(trump != nullptr)
+    const std::optional<romanian_whist::Card> trump = game.getCurrentTrumpCard();
+    view.hasTrump = trump.has_value();
+    if(trump)
         view.trump = *trump;
 
     view.seats.resize(playerCount);
@@ -124,16 +124,15 @@ void refreshFromEngine(GameView& view, const GameEngine& game)
     if(view.humanSeat < 0)
         return;
 
-    std::vector<const romanian_whist::Card*> ordered(
-        players.at(static_cast<std::size_t>(view.humanSeat)).getHand().begin(),
-        players.at(static_cast<std::size_t>(view.humanSeat)).getHand().end());
+    std::vector<romanian_whist::Card> ordered =
+        players.at(static_cast<std::size_t>(view.humanSeat)).getHand();
 
     CardFormat::sortForDisplay(ordered, trump);
 
-    for(const romanian_whist::Card* card : ordered)
+    for(const romanian_whist::Card& card : ordered)
     {
         HandEntry entry;
-        entry.card = *card;
+        entry.card = card;
         entry.legal = true;
         view.hand.push_back(entry);
     }

@@ -5,6 +5,8 @@
 #include <romanian_whist/CardValidator.h>
 
 #include <algorithm>
+#include <optional>
+#include <cstddef>
 #include <string>
 
 using romanian_whist::BetContext;
@@ -22,14 +24,23 @@ void ConsoleMoveProvider::redraw(const std::string& prompt, const std::string& e
     ui.renderer.drawFrame(ui.view, prompt);
 }
 
-std::vector<Card*> ConsoleMoveProvider::layOutHand(const std::vector<Card*>& hand,
-                                                   const std::vector<Card*>& legalCards,
-                                                   Card* trump) const
+std::vector<std::size_t> ConsoleMoveProvider::layOutHand(const std::vector<Card>& hand,
+                                                        const std::vector<Card>& legalCards,
+                                                        const std::optional<Card>& trump) const
 {
-    std::vector<const Card*> ordered(hand.begin(), hand.end());
-    CardFormat::sortForDisplay(ordered, trump);
+    // Positions rather than cards, sorted into display order. The extra
+    // indirection is the price of the engine wanting a hand index back: sorting
+    // the cards themselves would lose the only thing that can be translated
+    // into one.
+    std::vector<std::size_t> ordered(hand.size());
+    for(std::size_t i = 0 ; i < hand.size() ; i++)
+        ordered[i] = i;
 
-    std::vector<Card*> choices;
+    std::sort(ordered.begin(), ordered.end(),
+        [&hand, &trump](std::size_t left, std::size_t right)
+        { return CardFormat::inDisplayOrder(hand[left], hand[right], trump); });
+
+    std::vector<std::size_t> choices;
 
     ui.view.hand.clear();
     ui.view.hand.reserve(ordered.size());
@@ -38,20 +49,21 @@ std::vector<Card*> ConsoleMoveProvider::layOutHand(const std::vector<Card*>& han
     // shows the hand - so no card is greyed out and none gets a number.
     const bool choosing = !legalCards.empty();
 
-    for(const Card* card : ordered)
+    for(const std::size_t position : ordered)
     {
-        // Compare by pointer: identity is what the engine keys on when it
-        // removes the played card from the hand.
+        const Card& card = hand[position];
+
+        // By value: a deck holds no duplicates, so equality is identity here.
         const bool legal = !choosing ||
                            std::find(legalCards.begin(), legalCards.end(), card) != legalCards.end();
 
         HandEntry entry;
-        entry.card = *card;
+        entry.card = card;
         entry.legal = legal;
 
         if(choosing && legal)
         {
-            choices.push_back(const_cast<Card*>(card));
+            choices.push_back(position);
             entry.choice = static_cast<unsigned int>(choices.size());
         }
 
@@ -104,25 +116,25 @@ unsigned int ConsoleMoveProvider::makeBet(const BetContext& context)
     }
 }
 
-Card* ConsoleMoveProvider::playCard(const PlayContext& context)
+std::optional<std::size_t> ConsoleMoveProvider::playCard(const PlayContext& context)
 {
-    const std::vector<Card*>& hand = context.hand;
-    Card* trump = context.trump;
-    const Suit* leadSuit = context.leadSuit;
+    const std::vector<Card>& hand = context.hand;
+    const std::optional<Card>& trump = context.trump;
+    const std::optional<Suit>& leadSuit = context.leadSuit;
 
     CardValidator cardValidator;
-    const std::vector<Card*> legalCards = cardValidator.getLegalCards(hand, trump, leadSuit);
+    const std::vector<Card> legalCards = cardValidator.getLegalCards(hand, trump, leadSuit);
 
-    // No legal play. Returning nullptr matches what the engine's own strategies
+    // No legal play. Returning empty matches what the engine's own strategies
     // do; prompting would be impossible since no number could ever be valid.
     if(legalCards.empty())
-        return nullptr;
+        return std::nullopt;
 
-    const std::vector<Card*> choices = layOutHand(hand, legalCards, trump);
+    const std::vector<std::size_t> choices = layOutHand(hand, legalCards, trump);
 
-    if(leadSuit != nullptr && choices.size() < hand.size())
+    if(leadSuit && choices.size() < hand.size())
         ui.view.hint = "you must follow " + ui.cardFormat.suitGlyph(*leadSuit);
-    else if(leadSuit == nullptr)
+    else if(!leadSuit)
         ui.view.hint = "you lead";
     else
         ui.view.hint.clear();
@@ -140,5 +152,7 @@ Card* ConsoleMoveProvider::playCard(const PlayContext& context)
     ui.view.error.clear();
     ui.view.hint.clear();
 
+    // The number was an index into the numbered, legal, display-ordered list;
+    // what comes back out of it is the position in the hand the engine holds.
     return choices[static_cast<std::size_t>(choice) - 1];
 }
