@@ -14,6 +14,7 @@ using romanian_whist::BetContext;
 using romanian_whist::Card;
 using romanian_whist::CardValidator;
 using romanian_whist::PlayContext;
+using romanian_whist::RoundType;
 using romanian_whist::Suit;
 
 ConsoleMoveProvider::ConsoleMoveProvider(UiContext& _ui) : ui(_ui)
@@ -45,7 +46,21 @@ unsigned int ConsoleMoveProvider::makeBet(const BetContext& context)
     // Every card is shown, none numbered: this is the bidding screen, and the
     // player is choosing a number of tricks rather than a card. Seeing the hand
     // here at all is the point - the bid used to be asked for blind.
-    layOutHand(context.hand, {}, context.trump);
+    //
+    // Forehead and Hidden both mean this seat's own hand is off limits while
+    // bidding - the provider only ever bids for its own seat, so roundType
+    // alone says whether to show it, with no need to ask GameEngine::canSeeHand
+    // (that's for rendering every OTHER seat - see GameView::refreshFromEngine).
+    const bool blind = context.roundType == RoundType::Forehead ||
+                       context.roundType == RoundType::Hidden;
+
+    if(!blind)
+        layOutHand(context.hand, {}, context.trump);
+    else
+    {
+        ui.view.hand.clear();
+        ui.view.legalCount = 0;
+    }
 
     const int maxBet = static_cast<int>(context.hand.size());
     const std::string prompt = "How many tricks will you win? (0-" + std::to_string(maxBet) + "): ";

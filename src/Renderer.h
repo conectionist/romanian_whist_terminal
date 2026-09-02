@@ -42,6 +42,16 @@ private:
     void appendSeatTable(std::string& out, const GameView& view) const;
     void appendTrick(std::string& out, const GameView& view) const;
     void appendHand(std::string& out, const GameView& view) const;
+    void appendOtherHands(std::string& out, const GameView& view) const;
+
+    // Shared body of appendHand/appendOtherHands: one hand, laid out and
+    // captioned. `hand`'s own entries say whether a card is numbered or
+    // greyed out, so this needs nothing more to draw either the human's own
+    // turn or another seat's read-only Forehead-round hand.
+    void appendHandBlock(std::string& out,
+                         const std::vector<HandEntry>& hand,
+                         std::string_view caption,
+                         std::string_view rightCaption) const;
     void appendFooter(std::string& out, const GameView& view, std::string_view prompt) const;
 
     void appendRule(std::string& out,
