@@ -108,6 +108,11 @@ struct GameView
     std::string hint;
     std::string error;
 
+    // Minutes since the game started. The engine has no notion of wall-clock
+    // time, so this is left to the caller to set - same as activeSeat, message
+    // and hint above.
+    unsigned int elapsedMinutes = 0;
+
     unsigned int betsPlaced = 0;
     unsigned int betSum = 0;
 
@@ -121,7 +126,7 @@ struct GameView
 //
 // A pure function of the engine. What is left to the caller is only what the
 // engine does not model: which seat is active, the human's numbered hand
-// layout, and any message or hint.
+// layout, any message or hint, and elapsed wall-clock time.
 void refreshFromEngine(GameView& view, const romanian_whist::GameEngine& game);
 
 #endif

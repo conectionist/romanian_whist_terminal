@@ -77,12 +77,18 @@ private:
     // whole table shifts.
     static std::string pad(std::string_view text, unsigned int width, bool rightAlign = false);
 
+    // Same rule as pad(): call on plain text, colour the result afterward.
+    static std::string padCenter(std::string_view text, unsigned int width);
+
     // Drops the streak column and the spacer lines when the window is too short
     // for the full layout.
     bool compact() const;
 
     std::string roundTypeLabel(romanian_whist::RoundType type) const;
     std::string boxCorner(bool top, bool left) const;
+
+    // The header table's row divider meets the box sides at a T, not a corner.
+    std::string boxJunction(bool left) const;
     std::string horizontalLine(unsigned int length) const;
 };
 

@@ -15,6 +15,8 @@
 #include <romanian_whist/IGameObserver.h>
 #include <romanian_whist/Trick.h>
 
+#include <chrono>
+
 // The engine owns the loop now, so this is no longer a driver - it is what the
 // engine reports to. Every method below the constructor is a callback, and the
 // order they fire in is IGameObserver's contract, not this class's.
@@ -28,6 +30,11 @@ private:
     Pacer pacer;
     GameView view;
     UiContext ui;
+
+    // Set once, when startGame() calls game.start(). Wall-clock rather than the
+    // engine's own notion of time, because the engine has none - a bidding
+    // pause is real time the player experiences either way.
+    std::chrono::steady_clock::time_point startTime;
 
     // Declared last on purpose. The engine owns the players, a player owns the
     // human's ConsoleMoveProvider, and that provider holds a reference to `ui`
@@ -69,6 +76,12 @@ private:
     romanian_whist::GameSetup buildSetup(const GameConfig& config);
 
     bool isHumanSeat(romanian_whist::Seat seat) const;
+
+    // refreshFromEngine() plus the one thing about the view it doesn't set:
+    // elapsed minutes since startTime. Every callback below calls this instead
+    // of refreshFromEngine() directly, so the clock can never fall behind on a
+    // frame that forgot to update it.
+    void refresh(const romanian_whist::GameEngine& engine);
 };
 
 #endif

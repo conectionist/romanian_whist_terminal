@@ -86,6 +86,7 @@ void TerminalRomanianWhist::startGame()
 
     game.addObserver(this);
     pacer.setHumanIsPlaying(view.humanSeat >= 0);
+    startTime = std::chrono::steady_clock::now();
 
     // Seats the table, lays out the schedule, builds the deck and starts the
     // game - and fires onGameStarted() on the way out, which is why the observer
@@ -107,6 +108,15 @@ bool TerminalRomanianWhist::isHumanSeat(Seat seat) const
     return view.humanSeat >= 0 && static_cast<unsigned int>(view.humanSeat) == seat.index;
 }
 
+void TerminalRomanianWhist::refresh(const GameEngine& engine)
+{
+    refreshFromEngine(view, engine);
+
+    const auto elapsed = std::chrono::steady_clock::now() - startTime;
+    view.elapsedMinutes = static_cast<unsigned int>(
+        std::chrono::duration_cast<std::chrono::minutes>(elapsed).count());
+}
+
 void TerminalRomanianWhist::onRoundStarted(const GameEngine& engine)
 {
     view.phase = Phase::Betting;
@@ -114,13 +124,13 @@ void TerminalRomanianWhist::onRoundStarted(const GameEngine& engine)
     view.table.clear();
     view.activeSeat = -1;
 
-    refreshFromEngine(view, engine);
+    refresh(engine);
 }
 
 void TerminalRomanianWhist::onBetRequested(const GameEngine& engine, Seat seat)
 {
     view.activeSeat = static_cast<int>(seat.index);
-    refreshFromEngine(view, engine);
+    refresh(engine);
 
     // The human's own frame is drawn by their move provider, complete with the
     // prompt; drawing one here first would only flicker.
@@ -135,7 +145,7 @@ void TerminalRomanianWhist::onBetPlaced(const GameEngine& engine, Seat seat, uns
 
     // activeSeat stays on this seat: the frame showing the bid that was just
     // made should still highlight who made it.
-    refreshFromEngine(view, engine);
+    refresh(engine);
     renderer.drawFrame(view);
     pacer.beat();
 }
@@ -146,7 +156,7 @@ void TerminalRomanianWhist::onBettingComplete(const GameEngine& engine)
     // this the last bid is only ever seen when an AI made it, and the human
     // never gets to read what the table has committed to.
     view.activeSeat = -1;
-    refreshFromEngine(view, engine);
+    refresh(engine);
     renderer.drawFrame(view);
     pacer.beat();
 
@@ -163,14 +173,14 @@ void TerminalRomanianWhist::onTrickStarted(const GameEngine& engine, unsigned in
     view.message.clear();
     view.activeSeat = -1;
 
-    refreshFromEngine(view, engine);
+    refresh(engine);
 }
 
 void TerminalRomanianWhist::onCardRequested(const GameEngine& engine, Seat seat)
 {
     view.activeSeat = static_cast<int>(seat.index);
 
-    refreshFromEngine(view, engine);
+    refresh(engine);
 
     if(isHumanSeat(seat))
         return;
@@ -183,7 +193,7 @@ void TerminalRomanianWhist::onCardRequested(const GameEngine& engine, Seat seat)
 void TerminalRomanianWhist::onCardPlayed(const GameEngine& engine, Seat seat, const Card&)
 {
     view.hint.clear();
-    refreshFromEngine(view, engine);
+    refresh(engine);
     renderer.drawFrame(view);
 
     // The human's own card needs no pause: the time they spent choosing it
@@ -202,7 +212,7 @@ void TerminalRomanianWhist::onTrickWon(const GameEngine& engine, Seat winner, un
     // The finished trick is still the engine's current one throughout this
     // callback, so refreshFromEngine() rebuilds the completed table under the
     // message rather than a blank one.
-    refreshFromEngine(view, engine);
+    refresh(engine);
 
     const bool moreTricks = trickNumber < engine.getCurrentRoundTrickCount();
     renderer.drawFrame(view, moreTricks ? "Press Enter for the next trick"
@@ -221,7 +231,7 @@ void TerminalRomanianWhist::onRoundScored(const GameEngine& engine)
     view.activeSeat = -1;
     view.message.clear();
 
-    refreshFromEngine(view, engine);
+    refresh(engine);
     renderer.drawFrame(view, "Press Enter to deal the next round");
     pacer.roundPause();
 }
