@@ -24,7 +24,19 @@ constexpr unsigned int TotalWidth = 7;
 // parts rather than scrolling.
 constexpr unsigned int MinimumFullHeight = 26;
 
-constexpr unsigned int RuleWidth = 78;
+// Sized to the seat table (60 wide with its streak column) rather than a full
+// 80-column window - the section rules and boxes only need to read as wide as
+// the content they sit above, not fill the terminal.
+constexpr unsigned int RuleWidth = 58;
+
+// The header info table's columns, each sized to its caption plus a gap -
+// values never run long enough to need more (a round number, a trick count,
+// "Forehead", a two-character card, a minute count).
+constexpr unsigned int InfoRoundWidth = 8;
+constexpr unsigned int InfoDealtWidth = 14;
+constexpr unsigned int InfoTypeWidth = 12;
+constexpr unsigned int InfoTrumpWidth = 8;
+constexpr unsigned int InfoElapsedWidth = 12;
 
 std::string signedScore(int score)
 {
@@ -55,6 +67,20 @@ std::string Renderer::pad(std::string_view text, unsigned int width, bool rightA
     return rightAlign ? spaces + std::string(text) : std::string(text) + spaces;
 }
 
+std::string Renderer::padCenter(std::string_view text, unsigned int width)
+{
+    const unsigned int visible = Terminal::visibleWidth(text);
+
+    if(visible >= width)
+        return std::string(text);
+
+    const unsigned int total = width - visible;
+    const unsigned int left = total / 2;
+    const unsigned int right = total - left;
+
+    return std::string(left, ' ') + std::string(text) + std::string(right, ' ');
+}
+
 std::string Renderer::horizontalLine(unsigned int length) const
 {
     const std::string unit = terminal.unicodeEnabled() ? "─" : "-";
@@ -77,6 +103,14 @@ std::string Renderer::boxCorner(bool top, bool left) const
         return left ? "┌" : "┐";
 
     return left ? "└" : "┘";
+}
+
+std::string Renderer::boxJunction(bool left) const
+{
+    if(!terminal.unicodeEnabled())
+        return "+";
+
+    return left ? "├" : "┤";
 }
 
 std::string Renderer::roundTypeLabel(RoundType type) const
@@ -132,27 +166,42 @@ void Renderer::appendRule(std::string& out,
 void Renderer::appendHeader(std::string& out, const GameView& view) const
 {
     const unsigned int inner = RuleWidth;
+    const unsigned int boxWidth = inner + 2;
+
+    out += padCenter(terminal.paint("ROMANIAN WHIST", Terminal::Color::Yellow, true), boxWidth);
+    terminal.endLine(out);
 
     out += boxCorner(true, true) + horizontalLine(inner) + boxCorner(true, false);
     terminal.endLine(out);
 
-    std::string title = terminal.paint("ROMANIAN WHIST", Terminal::Color::Yellow, true);
-
-    std::string details = "Round " + std::to_string(view.roundNumber) +
-                          "/" + std::to_string(view.roundCount);
-
-    std::string body = " " + title + "     " + details +
-                       "     Round of " + std::to_string(view.trickCount) +
-                       "     " + roundTypeLabel(view.roundType);
-
-    if(view.hasTrump)
-        body += "     Trump  " + cardFormat.card(view.trump);
-    else
-        body += "     No trump";
-
     const std::string vertical = terminal.unicodeEnabled() ? "│" : "|";
 
-    out += vertical + pad(body, inner) + vertical;
+    std::string dealt = std::to_string(view.trickCount) +
+                        (view.trickCount == 1 ? " card" : " cards");
+    std::string trump = view.hasTrump ? cardFormat.card(view.trump) : "-";
+
+    std::string headerRow = " " +
+                            padCenter("Round", InfoRoundWidth) +
+                            padCenter("Cards dealt", InfoDealtWidth) +
+                            padCenter("Game type", InfoTypeWidth) +
+                            padCenter("Trump", InfoTrumpWidth) +
+                            padCenter("Elapsed time", InfoElapsedWidth);
+
+    std::string valueRow = " " +
+                           padCenter(std::to_string(view.roundNumber) + "/" +
+                               std::to_string(view.roundCount), InfoRoundWidth) +
+                           padCenter(dealt, InfoDealtWidth) +
+                           padCenter(roundTypeLabel(view.roundType), InfoTypeWidth) +
+                           padCenter(trump, InfoTrumpWidth) +
+                           padCenter(std::to_string(view.elapsedMinutes) + " min", InfoElapsedWidth);
+
+    out += vertical + pad(terminal.dim(headerRow), inner) + vertical;
+    terminal.endLine(out);
+
+    out += boxJunction(true) + horizontalLine(inner) + boxJunction(false);
+    terminal.endLine(out);
+
+    out += vertical + pad(valueRow, inner) + vertical;
     terminal.endLine(out);
 
     out += boxCorner(false, true) + horizontalLine(inner) + boxCorner(false, false);
