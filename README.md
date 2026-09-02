@@ -3,8 +3,10 @@
 A terminal UI for [Romanian Whist](https://en.wikipedia.org/wiki/Romanian_Whist), built on
 top of the [Romanian Whist engine](https://github.com/conectionist/romanian_whist_engine).
 
-All game logic lives in the engine, which is pulled in as a git submodule. This repo
-contains only the terminal interface:
+All game logic lives in the engine, which is pulled in as a git submodule — **engine 4.x**,
+which owns the game loop. This client does not drive a game; it registers as an
+`IGameObserver`, calls `run()`, and draws what it is told. This repo contains only the
+terminal interface:
 
 | File | Role |
 |---|---|
@@ -12,6 +14,7 @@ contains only the terminal interface:
 | `src/AppOptions.{h,cpp}` | Flags, environment and terminal capability detection |
 | `src/Terminal.{h,cpp}` | Escape sequences, alternate screen, width measurement |
 | `src/CardFormat.{h,cpp}` | Suit glyphs, colours, and the order a hand is displayed in |
+| `src/HandLayout.{h,cpp}` | Fitting a hand across the available width |
 | `src/GameView.{h,cpp}` | The snapshot of game state a frame is drawn from |
 | `src/Renderer.{h,cpp}` | Composes each frame |
 | `src/Pacer.{h,cpp}` | Animation delays and pauses |
@@ -19,7 +22,7 @@ contains only the terminal interface:
 | `src/SetupWizard.{h,cpp}` | Asking what kind of game to play |
 | `src/UiContext.h` | Gives the human's move provider access to the screen |
 | `src/ConsoleMoveProvider.{h,cpp}` | Draws the human's bidding and card screens and reads their choice |
-| `src/TerminalRomanianWhist.{h,cpp}` | The game loop |
+| `src/TerminalRomanianWhist.{h,cpp}` | The `IGameObserver` the engine reports to — every frame is drawn from a callback |
 
 ---
 
@@ -67,6 +70,7 @@ Run `--help` for the full list of options. In short:
 | Option | Effect |
 |---|---|
 | `--demo` | Skip setup and watch four bots play |
+| `--seed=<n>` | Replay the same deal and the same bot choices |
 | `--delay=<ms>` | Time between bot plays (default 700) |
 | `--no-animate` | Play at full speed, never pausing |
 | `--auto` | Advance without waiting for Enter |
@@ -75,9 +79,45 @@ Run `--help` for the full list of options. In short:
 | `--no-clear` | Scroll output instead of redrawing in place |
 | `--no-alt-screen` | Draw on the main screen, overwriting scrollback |
 | `--version` | Print the app version and the linked engine version |
+| `--help`, `-h` | Print the full option list and exit |
 
 While a hand is playing out, pressing <kbd>Enter</kbd> skips ahead to the end of the
 round.
+
+### Setting up a game
+
+Without `--demo`, a short wizard asks whether you are playing or watching, how many bots and
+how each should play, and three questions about the shape of the game:
+
+- **Which shape of game?** — `1-8-1` counts up from one card and back down; `8-1-8` does the
+  reverse.
+- **End with forehead and hidden hands?** — appends one Forehead round and one Hidden round to
+  the end of the game.
+- **Play every one-card round forehead?** — makes every one-card round in the schedule a
+  Forehead round, not just the appended one.
+
+A table needs 2 to 6 players, so the bot count on offer depends on your first answer: watching
+means at least 2 bots, playing means at least 1.
+
+### Forehead and Hidden rounds
+
+Both are one-card rounds that change what you can see while bidding, and the client draws them
+differently:
+
+- **Forehead** — your own card is hidden from you, and every *other* seat's card is shown, by
+  name. You bid on what everyone else is holding.
+- **Hidden** — nobody's card is shown, including your own. You bid on nothing.
+
+Play itself is unchanged: there is one card in hand, so there is no decision to make. Only the
+bidding screen differs, and `ConsoleMoveProvider` prompts blind in both.
+
+Who may see which hand is the engine's rule, not this client's — `GameView` asks
+`GameEngine::canSeeHand()` per seat rather than deciding from who is human, so this client and
+any other cannot disagree about it.
+
+A spectated game (`--demo`, or a setup with no human seat) shows no hands at all. "A spectator
+sees everything" would be a client policy, and this client does not implement one: a spectator
+is not a seat, so there is no viewer to ask `canSeeHand()` about.
 
 ### Terminal support
 
@@ -93,13 +133,21 @@ speed and writes a clean, escape-free transcript.
 
 ## Updating the engine
 
+The engine is released with tags, so pin one rather than tracking the tip:
+
 ```bash
 cd libs/RomanianWhistEngine
-git pull origin master
+git fetch --tags
+git checkout v4.0.0
 cd ../..
 git add libs/RomanianWhistEngine
-git commit -m "Update engine"
+git commit -m "Update engine to 4.0.0"
 ```
+
+`git pull origin master` also works. Check the engine's `CHANGELOG.md` before crossing a major
+version — this client requires **engine 4.x**, and 4.0.0 broke most of the 3.x API.
+
+What changed in this client, and when, is in [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
@@ -107,6 +155,19 @@ git commit -m "Update engine"
 
 `--demo` sets up a fixed four-bot game, which needs no input and is the quickest way to
 see a change. Combined with `--no-animate` a whole game finishes in well under a second.
+
+Add `--seed=<n>` and it prints the *same* transcript every run, which is what makes a
+rendering change reviewable as a diff:
+
+```bash
+./build/terminal_romanian_whist --demo --no-animate --seed=1 > before.txt
+# ... make a change, rebuild ...
+./build/terminal_romanian_whist --demo --no-animate --seed=1 | diff before.txt -
+```
+
+The seed reaches both halves of the randomness: it feeds the engine's deal through
+`GameSetup::shuffleSeed`, and, offset per seat, each bot's `RandomCardStrategy`. Seeding only
+one of the two would still wander.
 
 ### Drawing
 
@@ -124,8 +185,9 @@ painting it — padding a painted string counts the escape bytes as columns.
 
 `IMoveProvider` hands an implementation no route back to the game, so `ConsoleMoveProvider`
 is given a `UiContext` when it is constructed. That reference is why `TerminalRomanianWhist`
-declares its engine member last: members are destroyed in reverse order, so the provider
-must die before the context it points at.
+declares its engine member **last**: the engine owns the players, a player owns the human's
+`ConsoleMoveProvider`, and members are destroyed in reverse declaration order — so declaring
+the engine last is what makes the provider die before the `UiContext` it points at.
 
 ### Input handling
 
