@@ -1,6 +1,7 @@
 #include "Renderer.h"
 
 #include <algorithm>
+#include <cstddef>
 
 using romanian_whist::RoundType;
 
@@ -497,7 +498,33 @@ void Renderer::drawQuestion(std::string_view title,
     terminal.write(frame);
 }
 
-void Renderer::drawGameOver(const std::vector<romanian_whist::Standing>& standings) const
+std::string Renderer::winnerAnnouncement(const std::vector<romanian_whist::Standing>& winners)
+{
+    if(winners.empty())
+        return {};
+
+    const std::string points = std::to_string(winners.front().score) + " points.";
+
+    if(winners.size() == 1)
+        return winners.front().name + " wins with " + points;
+
+    // "Ana and Bogdan", "Ana, Bogdan and Cristi" - the last name joined with
+    // "and" rather than a comma, however many there are.
+    std::string names;
+
+    for(std::size_t i = 0 ; i < winners.size() ; i++)
+    {
+        if(i > 0)
+            names += (i + 1 == winners.size() ? " and " : ", ");
+
+        names += winners[i].name;
+    }
+
+    return names + " tie for first with " + points;
+}
+
+void Renderer::drawGameOver(const std::vector<romanian_whist::Standing>& standings,
+                            const std::vector<romanian_whist::Standing>& winners) const
 {
     std::string frame;
 
@@ -509,24 +536,27 @@ void Renderer::drawGameOver(const std::vector<romanian_whist::Standing>& standin
                             RuleWidth) + vertical + "\n";
     frame += boxCorner(false, true) + horizontalLine(RuleWidth) + boxCorner(false, false) + "\n\n";
 
-    unsigned int place = 1;
     for(const romanian_whist::Standing& standing : standings)
     {
-        const std::string row = "    " + pad(std::to_string(place) + ".", 4) +
+        // standing.place, not a counter incremented per row: seats level on
+        // points share a place, and the row after a two-way tie for 1st is 3rd.
+        // A counter would number a drawn table 1, 2, 3, 4 and quietly rank
+        // players the engine had ranked equal.
+        const std::string row = "    " + pad(std::to_string(standing.place) + ".", 4) +
                                 pad(standing.name, NameWidth) +
                                 pad(std::to_string(standing.score), TotalWidth, true) + " points";
 
-        frame += (place == 1 ? terminal.paint(row, Terminal::Color::Yellow, true) : row);
+        // Every winner is highlighted, not just the top row - on a draw the
+        // highlight has to name as many seats as the announcement below does.
+        frame += (standing.place == 1 ? terminal.paint(row, Terminal::Color::Yellow, true) : row);
         frame += "\n";
-        place++;
     }
 
-    if(!standings.empty())
+    const std::string announcement = winnerAnnouncement(winners);
+
+    if(!announcement.empty())
     {
-        frame += "\n    " +
-                 terminal.paint(standings[0].name + " wins with " +
-                                std::to_string(standings[0].score) + " points.",
-                                Terminal::Color::Green, true);
+        frame += "\n    " + terminal.paint(announcement, Terminal::Color::Green, true);
         frame += "\n";
     }
 

@@ -3,6 +3,31 @@
 The version lives in `CMakeLists.txt` and is printed by `--version`, alongside the version of
 the engine this build is linked against.
 
+## 2.1.0
+
+**A drawn game no longer has one winner.** The result screen read the first row of the standings
+and announced it, so a game two seats finished level on said one of them had won — and numbered the
+other second. Romanian Whist has no tie-breaker, so both of those were wrong.
+
+Requires **engine 4.1.0**, which is what decides this now: `Standing::place` ranks the table with
+ties sharing a place, and `GameEngine::getWinners()` returns every seat on the top score. This
+client renders that answer rather than working one out for itself.
+
+### Fixed
+
+- **Tied players share a place.** Places come from `Standing::place`, so a table finishing 47, 47,
+  30, 30 reads 1, 1, 3, 3 rather than 1, 2, 3, 4. A tie for first consumes second, so the row below
+  it is third.
+- **Every winner is highlighted**, not just the top row.
+- **The closing line names all of them**: "Ana and Bogdan tie for first with 47 points.", or
+  "Ana, Bogdan and Dan tie for first…" for three. A single winner still reads "Ana wins with 47
+  points."
+
+### Added
+
+- `tests/RendererTests.cpp` — the announcement wording, which is the part of the result screen that
+  is pure text and so the part a test can hold still.
+
 ## 2.0.0
 
 **The client stopped driving the game.** In 1.x `TerminalRomanianWhist` owned the game loop —

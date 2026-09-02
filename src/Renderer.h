@@ -35,7 +35,19 @@ public:
 
     // Drawn after leaving the alternate screen so the result survives in
     // scrollback once the program exits.
-    void drawGameOver(const std::vector<romanian_whist::Standing>& standings) const;
+    //
+    // `winners` comes from GameEngine::getWinners() rather than being picked
+    // out of `standings` here: the engine decides who won a drawn game, and a
+    // client that decides it for itself is how this came to announce one winner
+    // of a three-way draw in the first place.
+    void drawGameOver(const std::vector<romanian_whist::Standing>& standings,
+                      const std::vector<romanian_whist::Standing>& winners) const;
+
+    // The closing line: "Ana wins with 47 points." for one winner, "Ana and
+    // Bogdan tie for first with 47 points." for a draw. Public and static
+    // because it is the one part of the result screen that is pure text with no
+    // Terminal behind it, and so the one part a test can hold still.
+    static std::string winnerAnnouncement(const std::vector<romanian_whist::Standing>& winners);
 
 private:
     void appendHeader(std::string& out, const GameView& view) const;
