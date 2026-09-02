@@ -99,7 +99,7 @@ void TerminalRomanianWhist::startGame()
     // Off the alternate screen first, so the result is still there after the
     // program exits.
     terminal.leaveAltScreen();
-    renderer.drawGameOver(game.getStandings());
+    renderer.drawGameOver(game.getStandings(), game.getWinners());
 }
 
 bool TerminalRomanianWhist::isHumanSeat(Seat seat) const

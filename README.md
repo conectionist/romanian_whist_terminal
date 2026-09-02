@@ -138,14 +138,15 @@ The engine is released with tags, so pin one rather than tracking the tip:
 ```bash
 cd libs/RomanianWhistEngine
 git fetch --tags
-git checkout v4.0.0
+git checkout v4.1.0
 cd ../..
 git add libs/RomanianWhistEngine
-git commit -m "Update engine to 4.0.0"
+git commit -m "Update engine to 4.1.0"
 ```
 
 `git pull origin master` also works. Check the engine's `CHANGELOG.md` before crossing a major
-version — this client requires **engine 4.x**, and 4.0.0 broke most of the 3.x API.
+version — this client requires **engine 4.1.0 or newer** (it reads `Standing::place` and
+`getWinners()`), and 4.0.0 broke most of the 3.x API.
 
 What changed in this client, and when, is in [CHANGELOG.md](CHANGELOG.md).
 

@@ -10,6 +10,7 @@ add_executable(terminal_tests
     HandLayoutTests.cpp
     AppOptionsTests.cpp
     CardFormatTests.cpp
+    RendererTests.cpp
 )
 
 target_link_libraries(terminal_tests PRIVATE
