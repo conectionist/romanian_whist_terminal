@@ -312,7 +312,37 @@ void Renderer::appendHand(std::string& out, const GameView& view) const
         rightCaption = std::to_string(view.hand.size()) +
                        (view.hand.size() == 1 ? " card" : " cards");
 
-    appendRule(out, "YOUR HAND", rightCaption);
+    appendHandBlock(out, view.hand, "YOUR HAND", rightCaption);
+}
+
+void Renderer::appendOtherHands(std::string& out, const GameView& view) const
+{
+    // Every OTHER seat whose hand GameView::refreshFromEngine decided is
+    // visible this round (GameEngine::canSeeHand - Forehead rounds, today).
+    // Read-only: nothing here is being chosen, so there is no hint and no
+    // numbering - every entry was laid out with legalCards={}, which already
+    // marks every card legal, so appendHandBlock's illegal-card legend never
+    // fires for these.
+    for(const SeatView& seat : view.seats)
+    {
+        if(seat.isHuman || seat.hand.empty())
+            continue;
+
+        appendBlank(out);
+
+        const std::string rightCaption = std::to_string(seat.hand.size()) +
+                                         (seat.hand.size() == 1 ? " card" : " cards");
+
+        appendHandBlock(out, seat.hand, seat.name + "'s hand", rightCaption);
+    }
+}
+
+void Renderer::appendHandBlock(std::string& out,
+                               const std::vector<HandEntry>& hand,
+                               std::string_view caption,
+                               std::string_view rightCaption) const
+{
+    appendRule(out, caption, rightCaption);
     appendBlank(out);
 
     // One list, one numbering. Printing the hand and the legal plays as two
@@ -321,9 +351,9 @@ void Renderer::appendHand(std::string& out, const GameView& view) const
     bool anyIllegal = false;
     std::size_t index = 0;
 
-    while(index < view.hand.size())
+    while(index < hand.size())
     {
-        const romanian_whist::Suit suit = view.hand[index].card.suit;
+        const romanian_whist::Suit suit = hand[index].card.suit;
 
         std::string row = std::string(IndentWidth + 2, ' ');
         row += terminal.paint(cardFormat.suitGlyph(suit),
@@ -331,9 +361,9 @@ void Renderer::appendHand(std::string& out, const GameView& view) const
                               true);
         row += "  ";
 
-        while(index < view.hand.size() && view.hand[index].card.suit == suit)
+        while(index < hand.size() && hand[index].card.suit == suit)
         {
-            const HandEntry& entry = view.hand[index];
+            const HandEntry& entry = hand[index];
 
             std::string cell;
             if(entry.choice > 0)
@@ -420,6 +450,8 @@ void Renderer::drawFrame(const GameView& view, std::string_view prompt) const
         appendBlank(frame);
         appendHand(frame, view);
     }
+
+    appendOtherHands(frame, view);
 
     appendFooter(frame, view, prompt);
 

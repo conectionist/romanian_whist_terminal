@@ -26,6 +26,22 @@ enum class Phase
     GameOver
 };
 
+struct HandEntry
+{
+    romanian_whist::Card card{};
+
+    // Whether this card could be played on the current trick. False greys it
+    // out. Every card is "legal" on the bidding screen, where no card is being
+    // chosen at all.
+    bool legal = false;
+
+    // The number the player types to choose this card. Zero means no number is
+    // offered - either the card cannot be played, or nothing is being chosen.
+    // Numbering runs over displayed order, so what is shown and what is typed
+    // cannot drift apart.
+    unsigned int choice = 0;
+};
+
 struct SeatView
 {
     std::string name;
@@ -43,6 +59,14 @@ struct SeatView
     int totalScore = 0;
     unsigned int winStreak = 0;
     unsigned int lossStreak = 0;
+
+    // This seat's hand, laid out for display, when the human viewing this
+    // frame can see it (GameEngine::canSeeHand) - empty otherwise. Empty for
+    // the human's own seat too: that hand goes through the top-level
+    // GameView::hand/legalCount instead, so ConsoleMoveProvider's numbered-
+    // choice machinery has exactly one place to write. Populated for every
+    // OTHER seat whose hand is visible this round - Forehead rounds, today.
+    std::vector<HandEntry> hand;
 };
 
 struct PlayedCardView
@@ -50,22 +74,6 @@ struct PlayedCardView
     unsigned int seatIndex = 0;
     romanian_whist::Card card{};
     bool isWinning = false;
-};
-
-struct HandEntry
-{
-    romanian_whist::Card card{};
-
-    // Whether this card could be played on the current trick. False greys it
-    // out. Every card is "legal" on the bidding screen, where no card is being
-    // chosen at all.
-    bool legal = false;
-
-    // The number the player types to choose this card. Zero means no number is
-    // offered - either the card cannot be played, or nothing is being chosen.
-    // Numbering runs over displayed order, so what is shown and what is typed
-    // cannot drift apart.
-    unsigned int choice = 0;
 };
 
 struct GameView

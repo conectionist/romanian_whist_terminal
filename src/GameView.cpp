@@ -110,6 +110,22 @@ void refreshFromEngine(GameView& view, const GameEngine& game)
         seat.totalScore = game.getTotalScore(romanian_whist::Seat{i});
         seat.winStreak = player.getConsecutiveWins();
         seat.lossStreak = player.getConsecutiveLosses();
+
+        // Rebuilt every frame, same as the human's own hand below: cleared
+        // first, then populated only for another seat whose hand the human can
+        // currently see (GameEngine::canSeeHand - Forehead rounds, today). Not
+        // a spectator's business either way - "a spectator sees everything"
+        // stays a client policy nothing here implements, so this only runs
+        // once a human is actually seated.
+        seat.hand.clear();
+
+        if(view.humanSeat >= 0 && i != static_cast<unsigned int>(view.humanSeat))
+        {
+            const romanian_whist::Seat viewer{static_cast<unsigned int>(view.humanSeat)};
+
+            if(game.canSeeHand(viewer, romanian_whist::Seat{i}))
+                seat.hand = layOutHand(player.getHand(), {}, trump).entries;
+        }
     }
 
     rebuildTable(view, game);
@@ -124,6 +140,13 @@ void refreshFromEngine(GameView& view, const GameEngine& game)
     view.legalCount = 0;
 
     if(view.humanSeat < 0)
+        return;
+
+    const romanian_whist::Seat humanSeat{static_cast<unsigned int>(view.humanSeat)};
+
+    // Forehead: the human cannot see their own hand while it is being bid on.
+    // Hidden: nobody can. Both leave this cleared, same as spectator games.
+    if(!game.canSeeHand(humanSeat, humanSeat))
         return;
 
     // The same layout the move provider draws, asked for with no legal set -
