@@ -14,11 +14,49 @@
 #include <romanian_whist/strategies/FirstCardStrategy.h>
 #include <romanian_whist/strategies/LowRiskStrategy.h>
 #include <romanian_whist/strategies/RandomCardStrategy.h>
+#include <romanian_whist/strategies/ReckonerStrategy.h>
 
 using namespace romanian_whist;
 
 namespace
 {
+
+bool isReckoner(AiLevel level)
+{
+    switch(level)
+    {
+        case AiLevel::ReckonerEasy:
+        case AiLevel::ReckonerMedium:
+        case AiLevel::ReckonerHard:
+        case AiLevel::ReckonerBrutal:
+        case AiLevel::Reckoner:
+            return true;
+        default:
+            return false;
+    }
+}
+
+reckoner::ReckonerKnobs getReckonerKnobs(AiLevel level, reckoner::ReckonerPreset defaultPreset)
+{
+    switch(level)
+    {
+        case AiLevel::ReckonerEasy:   return reckoner::ReckonerKnobs::easy();
+        case AiLevel::ReckonerMedium: return reckoner::ReckonerKnobs::medium();
+        case AiLevel::ReckonerHard:   return reckoner::ReckonerKnobs::hard();
+        case AiLevel::ReckonerBrutal: return reckoner::ReckonerKnobs::brutal();
+        case AiLevel::Reckoner:
+        default:
+            switch(defaultPreset)
+            {
+                case reckoner::ReckonerPreset::Easy:   return reckoner::ReckonerKnobs::easy();
+                case reckoner::ReckonerPreset::Medium: return reckoner::ReckonerKnobs::medium();
+                case reckoner::ReckonerPreset::Brutal: return reckoner::ReckonerKnobs::brutal();
+                case reckoner::ReckonerPreset::Hard:
+                default:                               return reckoner::ReckonerKnobs::hard();
+            }
+    }
+}
+
 // `seed` is unset unless --seed was given. Only RandomCardStrategy reads it -
 // the other three are deterministic already - but it is offset per seat so that
 // two random bots in the same game do not draw the identical stream.
@@ -32,6 +70,7 @@ std::unique_ptr<IStrategy> makeStrategy(AiLevel level,
         case AiLevel::LowRisk:   return std::make_unique<LowRiskStrategy>();
         case AiLevel::Ducking:   return std::make_unique<DuckingStrategy>();
         case AiLevel::Random:    break;
+        default:                 break;
     }
 
     if(seed)
@@ -64,10 +103,21 @@ GameSetup TerminalRomanianWhist::buildSetup(const GameConfig& config)
 
     for(std::size_t i = 0 ; i < config.aiNames.size() ; i++)
     {
-        setup.seats.push_back(
-            SeatSetup{ config.aiNames[i],
-                       std::make_unique<AiMoveProvider>(
-                           makeStrategy(config.aiLevels[i], options.seed, i)) });
+        if(isReckoner(config.aiLevels[i]))
+        {
+            const auto botSeed = options.seed
+                ? std::optional<std::uint32_t>(*options.seed + static_cast<std::uint32_t>(i))
+                : std::nullopt;
+            const auto knobs = getReckonerKnobs(config.aiLevels[i], options.reckonerPreset);
+            setup.seats.push_back(makeReckonerSeat(config.aiNames[i], game, knobs, botSeed));
+        }
+        else
+        {
+            setup.seats.push_back(
+                SeatSetup{ config.aiNames[i],
+                           std::make_unique<AiMoveProvider>(
+                               makeStrategy(config.aiLevels[i], options.seed, i)) });
+        }
     }
 
     setup.structure = config.structure;

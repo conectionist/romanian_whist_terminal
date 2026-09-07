@@ -6,6 +6,8 @@
 #include <optional>
 #include <string>
 
+#include <romanian_whist/strategies/reckoner/ReckonerKnobs.h>
+
 // How the interface is allowed to draw itself, and how fast it plays.
 //
 // Every field starts at what a capable interactive terminal supports and is
@@ -31,6 +33,10 @@ struct AppOptions
     // time, and two builds can be diffed against each other. Unset means both
     // seed themselves from std::random_device.
     std::optional<std::uint32_t> seed;
+
+    // Difficulty preset for the Reckoner AI strategy (default: Hard).
+    romanian_whist::reckoner::ReckonerPreset reckonerPreset =
+        romanian_whist::reckoner::ReckonerPreset::Hard;
 
     // Returns false and fills errorOut on a malformed flag. `helpRequested` and
     // `versionRequested` are handled by the caller, which prints and exits.

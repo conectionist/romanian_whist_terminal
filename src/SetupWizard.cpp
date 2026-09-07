@@ -62,9 +62,9 @@ GameConfig SetupWizard::run() const
         // The quick game is the one most players will judge the bots on, so it
         // seats the two that actually think, and keeps one simple bot for
         // contrast. Ordered to match the seats they are dealt into.
-        static constexpr AiLevel QuickStartLevels[] = { AiLevel::LowRisk,
-                                                        AiLevel::Ducking,
-                                                        AiLevel::FirstCard };
+        static constexpr AiLevel QuickStartLevels[] = { AiLevel::Reckoner,
+                                                        AiLevel::LowRisk,
+                                                        AiLevel::Ducking };
 
         // Skip any stock name the player has just taken for themselves: sharing
         // a name with a bot would mean sharing its bets and its score.
@@ -123,7 +123,14 @@ GameConfig SetupWizard::run() const
     for(int i = 0 ; i < botCount ; i++)
     {
         const int level = ask("How should " + config.aiNames[i] + " play?",
-                              { "Randomly", "First playable card", "Low risk", "Ducking tricks" });
+                              { "Randomly",
+                                "First playable card",
+                                "Low risk",
+                                "Ducking tricks",
+                                "Reckoner (Easy)",
+                                "Reckoner (Medium)",
+                                "Reckoner (Hard)",
+                                "Reckoner (Brutal)" });
         config.aiLevels.push_back(AiLevels[level - 1]);
     }
 
@@ -149,8 +156,7 @@ GameConfig SetupWizard::demoConfig()
     config.spectator = true;
     config.aiNames = { "Danutz", "Mihai", "Aditz", "Fane" };
 
-    // One of each, so the demo is also the side-by-side comparison.
-    config.aiLevels = { AiLevel::LowRisk, AiLevel::Ducking, AiLevel::FirstCard, AiLevel::Random };
+    config.aiLevels = { AiLevel::ReckonerHard, AiLevel::LowRisk, AiLevel::Ducking, AiLevel::ReckonerMedium };
     config.structure = GameStructure::S_181;
     config.endWithForeheadAndHidden = true;
     config.all1GamesAreForehead = false;
