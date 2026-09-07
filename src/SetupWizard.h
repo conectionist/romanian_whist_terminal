@@ -16,7 +16,12 @@ enum class AiLevel
     Random,
     FirstCard,
     LowRisk,
-    Ducking
+    Ducking,
+    ReckonerEasy,
+    ReckonerMedium,
+    ReckonerHard,
+    ReckonerBrutal,
+    Reckoner
 };
 
 // Every option the wizard offers, in menu order, so the menu and the factory
@@ -24,7 +29,11 @@ enum class AiLevel
 inline constexpr AiLevel AiLevels[] = { AiLevel::Random,
                                         AiLevel::FirstCard,
                                         AiLevel::LowRisk,
-                                        AiLevel::Ducking };
+                                        AiLevel::Ducking,
+                                        AiLevel::ReckonerEasy,
+                                        AiLevel::ReckonerMedium,
+                                        AiLevel::ReckonerHard,
+                                        AiLevel::ReckonerBrutal };
 
 struct GameConfig
 {

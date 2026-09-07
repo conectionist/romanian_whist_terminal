@@ -175,3 +175,75 @@ TEST_CASE("An unrecognised argument is an error with something to say", "[app-op
     REQUIRE_FALSE(result.ok);
     REQUIRE_FALSE(result.error.empty());
 }
+
+TEST_CASE("The reckoner preset defaults to Hard when unspecified", "[app-options]")
+{
+    const ParseResult result = parse({});
+
+    REQUIRE(result.ok);
+    REQUIRE(result.options.reckonerPreset == romanian_whist::reckoner::ReckonerPreset::Hard);
+}
+
+TEST_CASE("The reckoner preset flag selects the requested difficulty", "[app-options]")
+{
+    using romanian_whist::reckoner::ReckonerPreset;
+
+    SECTION("easy")
+    {
+        const ParseResult result = parse({ "--reckoner-preset=easy" });
+
+        REQUIRE(result.ok);
+        REQUIRE(result.options.reckonerPreset == ReckonerPreset::Easy);
+    }
+
+    SECTION("medium")
+    {
+        const ParseResult result = parse({ "--reckoner-preset=medium" });
+
+        REQUIRE(result.ok);
+        REQUIRE(result.options.reckonerPreset == ReckonerPreset::Medium);
+    }
+
+    SECTION("hard")
+    {
+        const ParseResult result = parse({ "--reckoner-preset=hard" });
+
+        REQUIRE(result.ok);
+        REQUIRE(result.options.reckonerPreset == ReckonerPreset::Hard);
+    }
+
+    SECTION("brutal")
+    {
+        const ParseResult result = parse({ "--reckoner-preset=brutal" });
+
+        REQUIRE(result.ok);
+        REQUIRE(result.options.reckonerPreset == ReckonerPreset::Brutal);
+    }
+
+    SECTION("case-insensitive")
+    {
+        const ParseResult result = parse({ "--reckoner-preset=HARD" });
+
+        REQUIRE(result.ok);
+        REQUIRE(result.options.reckonerPreset == ReckonerPreset::Hard);
+    }
+}
+
+TEST_CASE("A malformed --reckoner-preset is rejected", "[app-options]")
+{
+    SECTION("unknown value")
+    {
+        const ParseResult result = parse({ "--reckoner-preset=unknown" });
+
+        REQUIRE_FALSE(result.ok);
+        REQUIRE_FALSE(result.error.empty());
+    }
+
+    SECTION("empty value")
+    {
+        const ParseResult result = parse({ "--reckoner-preset=" });
+
+        REQUIRE_FALSE(result.ok);
+        REQUIRE_FALSE(result.error.empty());
+    }
+}

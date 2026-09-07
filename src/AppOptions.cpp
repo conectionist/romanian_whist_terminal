@@ -138,6 +138,41 @@ bool parseSeedFlag(const char* argument, std::optional<std::uint32_t>& valueOut)
     return true;
 }
 
+// Returns false and fills errorOut if argument starts with "--reckoner-preset=" but has an invalid value.
+// Returns false with empty errorOut if argument does not start with "--reckoner-preset=".
+bool parseReckonerPresetFlag(const char* argument,
+                             romanian_whist::reckoner::ReckonerPreset& valueOut,
+                             std::string& errorOut)
+{
+    constexpr const char* Prefix = "--reckoner-preset=";
+
+    const std::size_t prefixLength = std::strlen(Prefix);
+    if(std::strncmp(argument, Prefix, prefixLength) != 0)
+        return false;
+
+    const char* text = argument + prefixLength;
+    std::string lowered(text);
+    std::transform(lowered.begin(), lowered.end(), lowered.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+
+    if(lowered == "easy")
+        valueOut = romanian_whist::reckoner::ReckonerPreset::Easy;
+    else if(lowered == "medium")
+        valueOut = romanian_whist::reckoner::ReckonerPreset::Medium;
+    else if(lowered == "hard")
+        valueOut = romanian_whist::reckoner::ReckonerPreset::Hard;
+    else if(lowered == "brutal")
+        valueOut = romanian_whist::reckoner::ReckonerPreset::Brutal;
+    else
+    {
+        errorOut = "Invalid value for --reckoner-preset: '" + std::string(text) +
+                   "'\nExpected 'easy', 'medium', 'hard', or 'brutal'.";
+        return false;
+    }
+
+    return true;
+}
+
 } // namespace
 
 bool AppOptions::fromCommandLine(int argc,
@@ -210,6 +245,15 @@ bool AppOptions::fromCommandLine(int argc,
         {
             // parseSeedFlag has already written options.seed.
         }
+        else if(std::strncmp(argument, "--reckoner-preset=", 18) == 0)
+        {
+            std::string parseError;
+            if(!parseReckonerPresetFlag(argument, options.reckonerPreset, parseError))
+            {
+                errorOut = parseError;
+                return false;
+            }
+        }
         else
         {
             errorOut = std::string("Unrecognised option: ") + argument +
@@ -252,6 +296,7 @@ std::string AppOptions::helpText()
         "\n"
         "Other:\n"
         "  --demo            Skip setup and watch four bots play\n"
+        "  --reckoner-preset=<p> Difficulty for Reckoner AI: easy, medium, hard, brutal (default: hard)\n"
         "  --seed=<n>        Replay the same deal and the same bot choices\n"
         "  -h, --help        Show this help\n"
         "  -v, --version     Show version information\n"
