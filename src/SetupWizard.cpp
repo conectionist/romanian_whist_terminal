@@ -2,6 +2,7 @@
 
 #include "Input.h"
 
+#include <iterator>
 #include <string>
 
 using romanian_whist::GameStructure;
@@ -10,6 +11,22 @@ namespace
 {
 
 const std::vector<std::string> BotNames = { "Ada", "Bob", "Cid", "Dot", "Eli" };
+
+// What the menu calls each entry of AiLevels, in the same order. Kept here
+// rather than inline in run() so the assert below can see it: the answer
+// indexes AiLevels, so a label without a level would read past its end.
+constexpr const char* AiLevelLabels[] = { "Randomly",
+                                          "First playable card",
+                                          "Low risk",
+                                          "Ducking tricks",
+                                          "Cyborg",
+                                          "Reckoner (Easy)",
+                                          "Reckoner (Medium)",
+                                          "Reckoner (Hard)",
+                                          "Reckoner (Brutal)" };
+
+static_assert(std::size(AiLevelLabels) == std::size(AiLevels),
+              "Every level on the menu needs a label, and every label a level");
 
 } // namespace
 
@@ -63,8 +80,8 @@ GameConfig SetupWizard::run() const
         // seats the two that actually think, and keeps one simple bot for
         // contrast. Ordered to match the seats they are dealt into.
         static constexpr AiLevel QuickStartLevels[] = { AiLevel::Reckoner,
-                                                        AiLevel::LowRisk,
-                                                        AiLevel::Ducking };
+                                                        AiLevel::Cyborg,
+                                                        AiLevel::LowRisk };
 
         // Skip any stock name the player has just taken for themselves: sharing
         // a name with a bot would mean sharing its bets and its score.
@@ -120,17 +137,11 @@ GameConfig SetupWizard::run() const
         taken.push_back(name);
     }
 
+    const std::vector<std::string> levelOptions(std::begin(AiLevelLabels), std::end(AiLevelLabels));
+
     for(int i = 0 ; i < botCount ; i++)
     {
-        const int level = ask("How should " + config.aiNames[i] + " play?",
-                              { "Randomly",
-                                "First playable card",
-                                "Low risk",
-                                "Ducking tricks",
-                                "Reckoner (Easy)",
-                                "Reckoner (Medium)",
-                                "Reckoner (Hard)",
-                                "Reckoner (Brutal)" });
+        const int level = ask("How should " + config.aiNames[i] + " play?", levelOptions);
         config.aiLevels.push_back(AiLevels[level - 1]);
     }
 
@@ -156,7 +167,10 @@ GameConfig SetupWizard::demoConfig()
     config.spectator = true;
     config.aiNames = { "Danutz", "Mihai", "Aditz", "Fane" };
 
-    config.aiLevels = { AiLevel::ReckonerHard, AiLevel::LowRisk, AiLevel::Ducking, AiLevel::ReckonerMedium };
+    // The Cyborg sits with the two strategies the engine measures it against,
+    // LowRisk and the Reckoner's Medium preset, so the demo doubles as that
+    // comparison.
+    config.aiLevels = { AiLevel::ReckonerHard, AiLevel::LowRisk, AiLevel::Cyborg, AiLevel::ReckonerMedium };
     config.structure = GameStructure::S_181;
     config.endWithForeheadAndHidden = true;
     config.all1GamesAreForehead = false;
