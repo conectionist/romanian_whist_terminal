@@ -3,6 +3,28 @@
 The version lives in `CMakeLists.txt` and is printed by `--version`, alongside the version of
 the engine this build is linked against.
 
+## 2.5.0
+
+**The Reckoner's presets are now Alpha, Beta, Gamma and Delta.** Engine 5.0.0 retired Easy,
+Medium, Hard and Brutal because they promised a difficulty ladder the presets do not climb: in
+play Hard is often no stronger than Easy or Medium, and Brutal overbids and regularly finishes
+last. The new names promise nothing until the presets are retuned. They map to the old ones in
+order, with the same knobs behind each, so every bot plays exactly as it did in 2.4.0 — a
+`--demo --seed=N` transcript saved before this release still matches one made after it.
+
+Requires **engine 5.0.0**, the first release with the new names.
+
+### Changed
+
+- **The "How should … play?" menu offers Reckoner (Alpha), (Beta), (Gamma) and (Delta)** as
+  options 6–9, where (Easy), (Medium), (Hard) and (Brutal) were.
+- **`--reckoner-preset` takes `alpha`, `beta`, `gamma` or `delta`**, and defaults to `gamma`,
+  which is the old `hard`. The old names are not kept as aliases: a script passing
+  `--reckoner-preset=hard` now stops with an error that lists the new ones.
+- **`--help` calls it a preset for the Reckoner, not a difficulty.**
+- **`--demo` seats Reckoner Gamma, LowRisk, Cyborg and Reckoner Beta** — the same four bots as
+  2.4.0, under their new names.
+
 ## 2.4.0
 
 **A new bot: the Cyborg.** Engine 4.3.0 added `CyborgStrategy`, a rule-based player that remembers

@@ -34,9 +34,9 @@ struct AppOptions
     // seed themselves from std::random_device.
     std::optional<std::uint32_t> seed;
 
-    // Difficulty preset for the Reckoner AI strategy (default: Hard).
+    // Preset for the Reckoner AI strategy (default: Gamma).
     romanian_whist::reckoner::ReckonerPreset reckonerPreset =
-        romanian_whist::reckoner::ReckonerPreset::Hard;
+        romanian_whist::reckoner::ReckonerPreset::Gamma;
 
     // Returns false and fills errorOut on a malformed flag. `helpRequested` and
     // `versionRequested` are handled by the caller, which prints and exits.

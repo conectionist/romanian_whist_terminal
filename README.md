@@ -3,7 +3,7 @@
 A terminal UI for [Romanian Whist](https://en.wikipedia.org/wiki/Romanian_Whist), built on
 top of the [Romanian Whist engine](https://github.com/conectionist/romanian_whist_engine).
 
-All game logic lives in the engine, which is pulled in as a git submodule — **engine 4.x**,
+All game logic lives in the engine, which is pulled in as a git submodule — **engine 5.x**,
 which owns the game loop. This client does not drive a game; it registers as an
 `IGameObserver`, calls `run()`, and draws what it is told. This repo contains only the
 terminal interface:
@@ -70,6 +70,7 @@ Run `--help` for the full list of options. In short:
 | Option | Effect |
 |---|---|
 | `--demo` | Skip setup and watch four bots play |
+| `--reckoner-preset=<p>` | Preset for the quick game's Reckoner: `alpha`, `beta`, `gamma` or `delta` (default `gamma`) |
 | `--seed=<n>` | Replay the same deal and the same bot choices |
 | `--delay=<ms>` | Time between bot plays (default 700) |
 | `--no-animate` | Play at full speed, never pausing |
@@ -138,15 +139,16 @@ The engine is released with tags, so pin one rather than tracking the tip:
 ```bash
 cd libs/RomanianWhistEngine
 git fetch --tags
-git checkout v4.3.0
+git checkout v5.0.0
 cd ../..
 git add libs/RomanianWhistEngine
-git commit -m "Update engine to 4.3.0"
+git commit -m "Update engine to 5.0.0"
 ```
 
 `git pull origin master` also works. Check the engine's `CHANGELOG.md` before crossing a major
-version — this client requires **engine 4.3.0 or newer** (it seats `CyborgStrategy`, and reads
-`Standing::place` and `getWinners()`), and 4.0.0 broke most of the 3.x API.
+version — this client requires **engine 5.0.0 or newer** (it asks for the Reckoner presets by
+their 5.0.0 names, seats `CyborgStrategy`, and reads `Standing::place` and `getWinners()`), and
+4.0.0 broke most of the 3.x API.
 
 What changed in this client, and when, is in [CHANGELOG.md](CHANGELOG.md).
 

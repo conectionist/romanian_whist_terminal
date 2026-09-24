@@ -20,10 +20,10 @@ constexpr const char* AiLevelLabels[] = { "Randomly",
                                           "Low risk",
                                           "Ducking tricks",
                                           "Cyborg",
-                                          "Reckoner (Easy)",
-                                          "Reckoner (Medium)",
-                                          "Reckoner (Hard)",
-                                          "Reckoner (Brutal)" };
+                                          "Reckoner (Alpha)",
+                                          "Reckoner (Beta)",
+                                          "Reckoner (Gamma)",
+                                          "Reckoner (Delta)" };
 
 static_assert(std::size(AiLevelLabels) == std::size(AiLevels),
               "Every level on the menu needs a label, and every label a level");
@@ -168,9 +168,9 @@ GameConfig SetupWizard::demoConfig()
     config.aiNames = { "Danutz", "Mihai", "Aditz", "Fane" };
 
     // The Cyborg sits with the two strategies the engine measures it against,
-    // LowRisk and the Reckoner's Medium preset, so the demo doubles as that
+    // LowRisk and the Reckoner's Beta preset, so the demo doubles as that
     // comparison.
-    config.aiLevels = { AiLevel::ReckonerHard, AiLevel::LowRisk, AiLevel::Cyborg, AiLevel::ReckonerMedium };
+    config.aiLevels = { AiLevel::ReckonerGamma, AiLevel::LowRisk, AiLevel::Cyborg, AiLevel::ReckonerBeta };
     config.structure = GameStructure::S_181;
     config.endWithForeheadAndHidden = true;
     config.all1GamesAreForehead = false;
