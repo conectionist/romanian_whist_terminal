@@ -138,15 +138,15 @@ The engine is released with tags, so pin one rather than tracking the tip:
 ```bash
 cd libs/RomanianWhistEngine
 git fetch --tags
-git checkout v4.1.0
+git checkout v4.3.0
 cd ../..
 git add libs/RomanianWhistEngine
-git commit -m "Update engine to 4.1.0"
+git commit -m "Update engine to 4.3.0"
 ```
 
 `git pull origin master` also works. Check the engine's `CHANGELOG.md` before crossing a major
-version — this client requires **engine 4.1.0 or newer** (it reads `Standing::place` and
-`getWinners()`), and 4.0.0 broke most of the 3.x API.
+version — this client requires **engine 4.3.0 or newer** (it seats `CyborgStrategy`, and reads
+`Standing::place` and `getWinners()`), and 4.0.0 broke most of the 3.x API.
 
 What changed in this client, and when, is in [CHANGELOG.md](CHANGELOG.md).
 
@@ -167,8 +167,10 @@ rendering change reviewable as a diff:
 ```
 
 The seed reaches both halves of the randomness: it feeds the engine's deal through
-`GameSetup::shuffleSeed`, and, offset per seat, each bot's `RandomCardStrategy`. Seeding only
-one of the two would still wander.
+`GameSetup::shuffleSeed`, and, offset per seat, every bot that draws — each
+`RandomCardStrategy`, and each Reckoner's deal sampler. Seeding only one of the two would still
+wander. The rest, the Cyborg included, draw nothing: given the same deal, they play the same
+game.
 
 ### Drawing
 

@@ -10,6 +10,7 @@
 #include "ConsoleMoveProvider.h"
 #include "Input.h"
 #include <romanian_whist/AiMoveProvider.h>
+#include <romanian_whist/strategies/CyborgStrategy.h>
 #include <romanian_whist/strategies/DuckingStrategy.h>
 #include <romanian_whist/strategies/FirstCardStrategy.h>
 #include <romanian_whist/strategies/LowRiskStrategy.h>
@@ -70,7 +71,13 @@ std::unique_ptr<IStrategy> makeStrategy(AiLevel level,
         case AiLevel::LowRisk:   return std::make_unique<LowRiskStrategy>();
         case AiLevel::Ducking:   return std::make_unique<DuckingStrategy>();
         case AiLevel::Random:    break;
-        default:                 break;
+
+        // The Reckoner and the Cyborg are observers as well as strategies, so
+        // buildSetup() builds them through their own seat factories. A level
+        // that gets here has no branch there, and seating a random bot under
+        // its name would hide that.
+        default:
+            throw std::logic_error("makeStrategy: this AI level needs its own seat factory in buildSetup()");
     }
 
     if(seed)
@@ -103,7 +110,12 @@ GameSetup TerminalRomanianWhist::buildSetup(const GameConfig& config)
 
     for(std::size_t i = 0 ; i < config.aiNames.size() ; i++)
     {
-        if(isReckoner(config.aiLevels[i]))
+        if(config.aiLevels[i] == AiLevel::Cyborg)
+        {
+            // Cyborg draws nothing, so --seed replays it without being handed one.
+            setup.seats.push_back(makeCyborgSeat(config.aiNames[i], game));
+        }
+        else if(isReckoner(config.aiLevels[i]))
         {
             const auto botSeed = options.seed
                 ? std::optional<std::uint32_t>(*options.seed + static_cast<std::uint32_t>(i))
