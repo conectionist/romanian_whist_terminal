@@ -155,18 +155,18 @@ bool parseReckonerPresetFlag(const char* argument,
     std::transform(lowered.begin(), lowered.end(), lowered.begin(),
                    [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
 
-    if(lowered == "easy")
-        valueOut = romanian_whist::reckoner::ReckonerPreset::Easy;
-    else if(lowered == "medium")
-        valueOut = romanian_whist::reckoner::ReckonerPreset::Medium;
-    else if(lowered == "hard")
-        valueOut = romanian_whist::reckoner::ReckonerPreset::Hard;
-    else if(lowered == "brutal")
-        valueOut = romanian_whist::reckoner::ReckonerPreset::Brutal;
+    if(lowered == "alpha")
+        valueOut = romanian_whist::reckoner::ReckonerPreset::Alpha;
+    else if(lowered == "beta")
+        valueOut = romanian_whist::reckoner::ReckonerPreset::Beta;
+    else if(lowered == "gamma")
+        valueOut = romanian_whist::reckoner::ReckonerPreset::Gamma;
+    else if(lowered == "delta")
+        valueOut = romanian_whist::reckoner::ReckonerPreset::Delta;
     else
     {
         errorOut = "Invalid value for --reckoner-preset: '" + std::string(text) +
-                   "'\nExpected 'easy', 'medium', 'hard', or 'brutal'.";
+                   "'\nExpected 'alpha', 'beta', 'gamma', or 'delta'.";
         return false;
     }
 
@@ -296,7 +296,7 @@ std::string AppOptions::helpText()
         "\n"
         "Other:\n"
         "  --demo            Skip setup and watch four bots play\n"
-        "  --reckoner-preset=<p> Difficulty for Reckoner AI: easy, medium, hard, brutal (default: hard)\n"
+        "  --reckoner-preset=<p> Preset for Reckoner AI: alpha, beta, gamma, delta (default: gamma)\n"
         "  --seed=<n>        Replay the same deal and the same bot choices\n"
         "  -h, --help        Show this help\n"
         "  -v, --version     Show version information\n"

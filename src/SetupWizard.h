@@ -18,10 +18,10 @@ enum class AiLevel
     LowRisk,
     Ducking,
     Cyborg,
-    ReckonerEasy,
-    ReckonerMedium,
-    ReckonerHard,
-    ReckonerBrutal,
+    ReckonerAlpha,
+    ReckonerBeta,
+    ReckonerGamma,
+    ReckonerDelta,
     Reckoner
 };
 
@@ -32,10 +32,10 @@ inline constexpr AiLevel AiLevels[] = { AiLevel::Random,
                                         AiLevel::LowRisk,
                                         AiLevel::Ducking,
                                         AiLevel::Cyborg,
-                                        AiLevel::ReckonerEasy,
-                                        AiLevel::ReckonerMedium,
-                                        AiLevel::ReckonerHard,
-                                        AiLevel::ReckonerBrutal };
+                                        AiLevel::ReckonerAlpha,
+                                        AiLevel::ReckonerBeta,
+                                        AiLevel::ReckonerGamma,
+                                        AiLevel::ReckonerDelta };
 
 struct GameConfig
 {

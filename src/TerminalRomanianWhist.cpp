@@ -26,10 +26,10 @@ bool isReckoner(AiLevel level)
 {
     switch(level)
     {
-        case AiLevel::ReckonerEasy:
-        case AiLevel::ReckonerMedium:
-        case AiLevel::ReckonerHard:
-        case AiLevel::ReckonerBrutal:
+        case AiLevel::ReckonerAlpha:
+        case AiLevel::ReckonerBeta:
+        case AiLevel::ReckonerGamma:
+        case AiLevel::ReckonerDelta:
         case AiLevel::Reckoner:
             return true;
         default:
@@ -41,19 +41,19 @@ reckoner::ReckonerKnobs getReckonerKnobs(AiLevel level, reckoner::ReckonerPreset
 {
     switch(level)
     {
-        case AiLevel::ReckonerEasy:   return reckoner::ReckonerKnobs::easy();
-        case AiLevel::ReckonerMedium: return reckoner::ReckonerKnobs::medium();
-        case AiLevel::ReckonerHard:   return reckoner::ReckonerKnobs::hard();
-        case AiLevel::ReckonerBrutal: return reckoner::ReckonerKnobs::brutal();
+        case AiLevel::ReckonerAlpha: return reckoner::ReckonerKnobs::alpha();
+        case AiLevel::ReckonerBeta:  return reckoner::ReckonerKnobs::beta();
+        case AiLevel::ReckonerGamma: return reckoner::ReckonerKnobs::gamma();
+        case AiLevel::ReckonerDelta: return reckoner::ReckonerKnobs::delta();
         case AiLevel::Reckoner:
         default:
             switch(defaultPreset)
             {
-                case reckoner::ReckonerPreset::Easy:   return reckoner::ReckonerKnobs::easy();
-                case reckoner::ReckonerPreset::Medium: return reckoner::ReckonerKnobs::medium();
-                case reckoner::ReckonerPreset::Brutal: return reckoner::ReckonerKnobs::brutal();
-                case reckoner::ReckonerPreset::Hard:
-                default:                               return reckoner::ReckonerKnobs::hard();
+                case reckoner::ReckonerPreset::Alpha: return reckoner::ReckonerKnobs::alpha();
+                case reckoner::ReckonerPreset::Beta:  return reckoner::ReckonerKnobs::beta();
+                case reckoner::ReckonerPreset::Delta: return reckoner::ReckonerKnobs::delta();
+                case reckoner::ReckonerPreset::Gamma:
+                default:                              return reckoner::ReckonerKnobs::gamma();
             }
     }
 }

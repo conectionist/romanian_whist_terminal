@@ -176,56 +176,56 @@ TEST_CASE("An unrecognised argument is an error with something to say", "[app-op
     REQUIRE_FALSE(result.error.empty());
 }
 
-TEST_CASE("The reckoner preset defaults to Hard when unspecified", "[app-options]")
+TEST_CASE("The reckoner preset defaults to Gamma when unspecified", "[app-options]")
 {
     const ParseResult result = parse({});
 
     REQUIRE(result.ok);
-    REQUIRE(result.options.reckonerPreset == romanian_whist::reckoner::ReckonerPreset::Hard);
+    REQUIRE(result.options.reckonerPreset == romanian_whist::reckoner::ReckonerPreset::Gamma);
 }
 
-TEST_CASE("The reckoner preset flag selects the requested difficulty", "[app-options]")
+TEST_CASE("The reckoner preset flag selects the requested preset", "[app-options]")
 {
     using romanian_whist::reckoner::ReckonerPreset;
 
-    SECTION("easy")
+    SECTION("alpha")
     {
-        const ParseResult result = parse({ "--reckoner-preset=easy" });
+        const ParseResult result = parse({ "--reckoner-preset=alpha" });
 
         REQUIRE(result.ok);
-        REQUIRE(result.options.reckonerPreset == ReckonerPreset::Easy);
+        REQUIRE(result.options.reckonerPreset == ReckonerPreset::Alpha);
     }
 
-    SECTION("medium")
+    SECTION("beta")
     {
-        const ParseResult result = parse({ "--reckoner-preset=medium" });
+        const ParseResult result = parse({ "--reckoner-preset=beta" });
 
         REQUIRE(result.ok);
-        REQUIRE(result.options.reckonerPreset == ReckonerPreset::Medium);
+        REQUIRE(result.options.reckonerPreset == ReckonerPreset::Beta);
     }
 
-    SECTION("hard")
+    SECTION("gamma")
     {
-        const ParseResult result = parse({ "--reckoner-preset=hard" });
+        const ParseResult result = parse({ "--reckoner-preset=gamma" });
 
         REQUIRE(result.ok);
-        REQUIRE(result.options.reckonerPreset == ReckonerPreset::Hard);
+        REQUIRE(result.options.reckonerPreset == ReckonerPreset::Gamma);
     }
 
-    SECTION("brutal")
+    SECTION("delta")
     {
-        const ParseResult result = parse({ "--reckoner-preset=brutal" });
+        const ParseResult result = parse({ "--reckoner-preset=delta" });
 
         REQUIRE(result.ok);
-        REQUIRE(result.options.reckonerPreset == ReckonerPreset::Brutal);
+        REQUIRE(result.options.reckonerPreset == ReckonerPreset::Delta);
     }
 
     SECTION("case-insensitive")
     {
-        const ParseResult result = parse({ "--reckoner-preset=HARD" });
+        const ParseResult result = parse({ "--reckoner-preset=GAMMA" });
 
         REQUIRE(result.ok);
-        REQUIRE(result.options.reckonerPreset == ReckonerPreset::Hard);
+        REQUIRE(result.options.reckonerPreset == ReckonerPreset::Gamma);
     }
 }
 
@@ -242,6 +242,14 @@ TEST_CASE("A malformed --reckoner-preset is rejected", "[app-options]")
     SECTION("empty value")
     {
         const ParseResult result = parse({ "--reckoner-preset=" });
+
+        REQUIRE_FALSE(result.ok);
+        REQUIRE_FALSE(result.error.empty());
+    }
+
+    SECTION("a name the engine retired in 5.0.0")
+    {
+        const ParseResult result = parse({ "--reckoner-preset=hard" });
 
         REQUIRE_FALSE(result.ok);
         REQUIRE_FALSE(result.error.empty());
