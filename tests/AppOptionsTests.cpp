@@ -1,4 +1,5 @@
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 
 #include "AppOptions.h"
 
@@ -252,6 +253,9 @@ TEST_CASE("A malformed --reckoner-preset is rejected", "[app-options]")
         const ParseResult result = parse({ "--reckoner-preset=hard" });
 
         REQUIRE_FALSE(result.ok);
-        REQUIRE_FALSE(result.error.empty());
+
+        // The CHANGELOG promises a script still passing an old name is told the new ones.
+        for(const char* name : { "alpha", "beta", "gamma", "delta" })
+            REQUIRE_THAT(result.error, Catch::Matchers::ContainsSubstring(name));
     }
 }

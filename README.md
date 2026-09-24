@@ -70,6 +70,7 @@ Run `--help` for the full list of options. In short:
 | Option | Effect |
 |---|---|
 | `--demo` | Skip setup and watch four bots play |
+| `--reckoner-preset=<p>` | Preset for the quick game's Reckoner: `alpha`, `beta`, `gamma` or `delta` (default `gamma`) |
 | `--seed=<n>` | Replay the same deal and the same bot choices |
 | `--delay=<ms>` | Time between bot plays (default 700) |
 | `--no-animate` | Play at full speed, never pausing |
