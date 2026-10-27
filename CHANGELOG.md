@@ -3,6 +3,19 @@
 The version lives in `CMakeLists.txt` and is printed by `--version`, alongside the version of
 the engine this build is linked against.
 
+## 2.5.1
+
+### Fixed
+
+- **"Press Enter for the next trick" now waits for you** in a game you play
+  ([#19](https://github.com/conectionist/romanian_whist_terminal/issues/19)). The Enter you
+  pressed to play your card was left unread, and the pause after the trick took it as its own,
+  so the next trick started before you could see who won. "Press Enter to see the round result"
+  was skipped the same way. Every choice you type now takes its whole line, Enter included.
+  Watching a game was never affected.
+- **A choice takes only the first number on its line.** Before, `2 3` answered two prompts in a
+  row; now the `3` is ignored. Put each answer on its own line when piping moves in.
+
 ## 2.5.0
 
 **The Reckoner's presets are now Alpha, Beta, Gamma and Delta.** Engine 5.0.0 retired Easy,
