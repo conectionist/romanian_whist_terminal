@@ -3,6 +3,41 @@
 A terminal UI for [Romanian Whist](https://en.wikipedia.org/wiki/Romanian_Whist), built on
 top of the [Romanian Whist engine](https://github.com/conectionist/romanian_whist_engine).
 
+![Four bots playing a 5-card round](docs/readme/watching.gif)
+
+*Four bots playing a 5-card round, shown at half speed.*
+
+## Screenshots
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/readme/menu.png" alt="The start menu"></td>
+    <td width="50%"><img src="docs/readme/opponents.png" alt="Choosing how a bot plays"></td>
+  </tr>
+  <tr>
+    <td>Start a quick game, watch the bots, or set the game up yourself.</td>
+    <td>Choose how each bot plays.</td>
+  </tr>
+  <tr>
+    <td><img src="docs/readme/bidding.png" alt="Bidding in a 5-card round"></td>
+    <td><img src="docs/readme/your-turn.png" alt="Your turn: only the cards you may play are numbered"></td>
+  </tr>
+  <tr>
+    <td>Bidding: how many tricks will you win?</td>
+    <td>Your turn: you must follow ♠, so only your spades are numbered.</td>
+  </tr>
+  <tr>
+    <td><img src="docs/readme/forehead-round.png" alt="A forehead round: everyone's card is shown but your own"></td>
+    <td><img src="docs/readme/final-results.png" alt="The final results, printed when the game ends"></td>
+  </tr>
+  <tr>
+    <td>A forehead round: you see everyone's card but your own.</td>
+    <td>The final results, printed when the game ends.</td>
+  </tr>
+</table>
+
+## How it is built
+
 All game logic lives in the engine, which is pulled in as a git submodule — **engine 5.x**,
 which owns the game loop. This client does not drive a game; it registers as an
 `IGameObserver`, calls `run()`, and draws what it is told. This repo contains only the
