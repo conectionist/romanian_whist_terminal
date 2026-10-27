@@ -3,9 +3,9 @@
 A terminal UI for [Romanian Whist](https://en.wikipedia.org/wiki/Romanian_Whist), built on
 top of the [Romanian Whist engine](https://github.com/conectionist/romanian_whist_engine).
 
-![Four bots playing a 5-card round](docs/readme/watching.gif)
+![Bidding and playing a 5-card round against three bots](docs/readme/gameplay.gif)
 
-*Four bots playing a 5-card round, shown at half speed.*
+*Bidding 2 in a 5-card round and taking exactly two tricks.*
 
 ## Screenshots
 
@@ -35,6 +35,12 @@ top of the [Romanian Whist engine](https://github.com/conectionist/romanian_whis
     <td>The final results, printed when the game ends.</td>
   </tr>
 </table>
+
+### Watching the bots play
+
+![Four bots playing a 5-card round](docs/readme/watching.gif)
+
+*Four bots playing a 5-card round, shown at half speed.*
 
 ## How it is built
 
