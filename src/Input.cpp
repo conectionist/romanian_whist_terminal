@@ -21,16 +21,14 @@ void failOnEndOfInput()
         throw std::runtime_error("Input closed while awaiting a choice.");
 }
 
-// A preceding formatted read leaves its newline in the buffer; a getline that
-// followed would return an empty line for it.
+// Every read takes its whole line, Enter included, so nothing is left behind for
+// the next one. A leftover Enter would answer the next "Press Enter" on its own.
 //
-// Test in_avail() before peeking: peek() blocks when nothing is buffered, so on
-// an empty buffer it would swallow the keypress the caller is waiting for and
-// then go on waiting for a second one.
-void discardPendingNewline()
+// This cannot be tidied up later by checking what is waiting: on libstdc++,
+// std::cin is synced with stdio by default and in_avail() is then always 0.
+void discardRestOfLine()
 {
-    if(std::cin.rdbuf()->in_avail() > 0 && std::cin.peek() == '\n')
-        std::cin.ignore();
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 }
 
 std::string trim(const std::string& text)
@@ -63,6 +61,8 @@ int Input::readChoice(int lowest, int highest, const Redraw& redraw)
     {
         if(std::cin >> value)
         {
+            discardRestOfLine();
+
             if(value >= lowest && value <= highest)
                 return value;
 
@@ -74,7 +74,7 @@ int Input::readChoice(int lowest, int highest, const Redraw& redraw)
             failOnEndOfInput();
 
             std::cin.clear();
-            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            discardRestOfLine();
 
             redraw("That is not a number. Enter one between " + std::to_string(lowest) +
                    " and " + std::to_string(highest) + ".");
@@ -88,8 +88,6 @@ std::string Input::readLine(const Redraw& redraw)
 
     while(true)
     {
-        discardPendingNewline();
-
         if(!std::getline(std::cin, line))
         {
             failOnEndOfInput();
@@ -140,8 +138,6 @@ void Input::waitForEnter(bool interactive)
 {
     if(!interactive)
         return;
-
-    discardPendingNewline();
 
     std::string discarded;
     if(!std::getline(std::cin, discarded))
