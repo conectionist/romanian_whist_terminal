@@ -207,7 +207,7 @@ already depend on the engine.
 - Order the includes, rename the private `layOutHand()` (for example `showHand()`), and drop the
   repeated `virtual`.
 - Add a `.clang-format` for the style the code already uses, check it in CI, and remove `.vscode/`.
-- Add a `CLAUDE.md` with the same comment rule as the engine and the desktop client.
+- **Done:** `CLAUDE.md` now has the same comment rule as the engine and the desktop client.
 
 ## What would make it an 8
 
