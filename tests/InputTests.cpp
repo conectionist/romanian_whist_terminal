@@ -124,3 +124,41 @@ TEST_CASE("Waiting for Enter does nothing when input is not interactive", "[inpu
 
     CHECK(restOfInput() == "\nnext\n");
 }
+
+TEST_CASE("A name with an escape sequence in it is asked for again", "[input]")
+{
+    FakeInput input("\x1b]0;title\x07\nAna\n");
+    std::string error;
+
+    CHECK(Input::readName(10, {}, [&error](const std::string& e) { error = e; }) == "Ana");
+    CHECK(error == "Names cannot contain control characters.");
+}
+
+TEST_CASE("Every kind of control character in a name is refused", "[input]")
+{
+    // A tab, DEL, and U+009B, the one-character form of the escape that starts
+    // a colour or cursor sequence.
+    FakeInput input("An\ta\n" "An\x7F" "a\n" "\xC2\x9B" "31m\n" "Ana\n");
+    int refusals = 0;
+
+    CHECK(Input::readName(10, {}, [&refusals](const std::string&) { refusals++; }) == "Ana");
+    CHECK(refusals == 3);
+}
+
+TEST_CASE("Letters outside ASCII are allowed in a name", "[input]")
+{
+    // Written as bytes, so the test does not depend on the compiler reading the
+    // source as UTF-8. The second name starts with C2, the lead byte the C1
+    // controls share with ordinary characters such as the copyright sign.
+    FakeInput input("\xC8\x98" "tefan\n" "\xC2\xA9" "Ana\n");
+
+    CHECK(Input::readName(10, {}, ignoreErrors) == "\xC8\x98" "tefan");
+    CHECK(Input::readName(10, {}, ignoreErrors) == "\xC2\xA9" "Ana");
+}
+
+TEST_CASE("A name typed with a Windows line ending is accepted", "[input]")
+{
+    FakeInput input("Ana\r\n");
+
+    CHECK(Input::readName(10, {}, ignoreErrors) == "Ana");
+}
