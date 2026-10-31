@@ -41,6 +41,30 @@ std::string trim(const std::string& text)
     return begin < end ? std::string(begin, end) : std::string();
 }
 
+// Names are printed to the terminal as they are, so a control character in one
+// would be obeyed rather than shown: an escape sequence can move the cursor,
+// retitle the window or write to the clipboard.
+bool containsControlCharacter(const std::string& text)
+{
+    for(std::size_t i = 0 ; i < text.size() ; i++)
+    {
+        const unsigned char byte = static_cast<unsigned char>(text[i]);
+
+        if(byte < 0x20 || byte == 0x7F)
+            return true;
+
+        // The C1 controls, U+0080 to U+009F, which UTF-8 encodes as C2 80 to C2 9F.
+        if(byte == 0xC2 && i + 1 < text.size())
+        {
+            const unsigned char next = static_cast<unsigned char>(text[i + 1]);
+            if(next >= 0x80 && next <= 0x9F)
+                return true;
+        }
+    }
+
+    return false;
+}
+
 } // namespace
 
 bool Input::equalIgnoringCase(const std::string& left, const std::string& right)
@@ -112,6 +136,12 @@ std::string Input::readName(unsigned int maxLength,
     while(true)
     {
         const std::string name = readLine(redraw);
+
+        if(containsControlCharacter(name))
+        {
+            redraw("Names cannot contain control characters.");
+            continue;
+        }
 
         if(name.size() > maxLength)
         {
