@@ -3,6 +3,30 @@
 The version lives in `CMakeLists.txt` and is printed by `--version`, alongside the version of
 the engine this build is linked against.
 
+## 2.5.2
+
+**A security review, and the fixes it led to.** `docs/SECURITY_REVIEW.md` answers what you expose
+yourself to by running the game: what the program can reach on your system, how it was tested and
+what was found. In short, it cannot read or write your files, reach the network or start other
+programs. The CI that builds the release binaries now pins the code it downloads to exact commits
+and runs with read-only access unless a job needs more.
+
+### Changed
+
+- **A name the terminal would obey rather than show is asked for again.** Names are printed to
+  the terminal as typed, so an escape sequence in one was obeyed rather than shown: it could
+  recolour the screen, move the cursor or retitle the window. In a UTF-8 locale a name must now be
+  well-formed UTF-8 with no control characters. In any other locale, the bytes such a terminal
+  treats as controls are refused, and its own accented letters are accepted.
+- **The 10-character limit on names counts characters, not bytes**, so an accented letter no
+  longer counts as two.
+- **An unknown or malformed flag is echoed with its control characters written out**, as `\x1B`
+  and so on, rather than passed to the terminal.
+- **On Windows, a name with an accented letter is usually refused** unless the console's input is
+  UTF-8 (`chcp 65001`). Most such letters arrive in the console's own code page as bytes that are
+  not UTF-8. The few that happen to form UTF-8 are accepted and drawn as other letters, as every
+  such name used to be.
+
 ## 2.5.1
 
 ### Fixed

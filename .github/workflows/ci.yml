@@ -20,6 +20,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+# Read-only unless a job asks for more. Only the release job writes.
+permissions:
+  contents: read
+
 jobs:
   build-linux:
     name: Build (Linux)
@@ -160,9 +164,11 @@ jobs:
           path: artifacts
           merge-multiple: true
 
+      # Pinned to a commit, not a tag, because a tag can be moved and this step
+      # holds a token that can write to the repository.
       - name: Create release
         if: steps.version.outputs.is_new == 'true'
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           tag_name: v${{ steps.version.outputs.version }}
           files: artifacts/*

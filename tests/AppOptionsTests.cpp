@@ -3,7 +3,10 @@
 
 #include "AppOptions.h"
 
+#include <cstdlib>
+#include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 // AppOptions::fromCommandLine is already a public static taking argc/argv, so
@@ -177,6 +180,29 @@ TEST_CASE("An unrecognised argument is an error with something to say", "[app-op
     REQUIRE_FALSE(result.error.empty());
 }
 
+TEST_CASE("A bad argument is echoed with its control characters written out", "[app-options]")
+{
+    // The error is printed to the terminal, which would obey an escape sequence
+    // in it rather than show it.
+    SECTION("unrecognised option")
+    {
+        const ParseResult result = parse({ "--x\x1B]0;title\x07" });
+
+        REQUIRE_FALSE(result.ok);
+        CHECK_THAT(result.error, Catch::Matchers::ContainsSubstring("--x\\x1B]0;title\\x07"));
+        CHECK(result.error.find('\x1B') == std::string::npos);
+    }
+
+    SECTION("bad reckoner preset")
+    {
+        const ParseResult result = parse({ "--reckoner-preset=\x9B" "2J" });
+
+        REQUIRE_FALSE(result.ok);
+        CHECK_THAT(result.error, Catch::Matchers::ContainsSubstring("'\\x9B2J'"));
+        CHECK(result.error.find('\x9B') == std::string::npos);
+    }
+}
+
 TEST_CASE("The reckoner preset defaults to Gamma when unspecified", "[app-options]")
 {
     const ParseResult result = parse({});
@@ -259,3 +285,142 @@ TEST_CASE("A malformed --reckoner-preset is rejected", "[app-options]")
             REQUIRE_THAT(result.error, Catch::Matchers::ContainsSubstring(name));
     }
 }
+
+#ifdef _WIN32
+
+TEST_CASE("Windows always checks outside text as UTF-8", "[app-options]")
+{
+    // The game switches the console's output to UTF-8, whatever the locale says.
+    CHECK(parse({}).options.encoding == DisplayText::Encoding::Utf8);
+}
+
+#else
+
+namespace
+{
+// Sets or clears environment variables for as long as it lives, then puts back
+// what was there, so one test's locale cannot leak into the next.
+class ScopedEnvironment
+{
+public:
+    ScopedEnvironment() = default;
+    ScopedEnvironment(const ScopedEnvironment&) = delete;
+    ScopedEnvironment& operator=(const ScopedEnvironment&) = delete;
+
+    ~ScopedEnvironment()
+    {
+        for(auto entry = saved.rbegin() ; entry != saved.rend() ; ++entry)
+            assign(entry->first.c_str(), entry->second ? entry->second->c_str() : nullptr);
+    }
+
+    void set(const char* name, const char* value)
+    {
+        const char* previous = std::getenv(name);
+        saved.emplace_back(name, previous ? std::optional<std::string>(previous) : std::nullopt);
+
+        assign(name, value);
+    }
+
+private:
+    static void assign(const char* name, const char* value)
+    {
+        if(value)
+            ::setenv(name, value, 1);
+        else
+            ::unsetenv(name);
+    }
+
+    std::vector<std::pair<std::string, std::optional<std::string>>> saved;
+};
+
+// The first of LC_ALL, LC_CTYPE and LANG that is set decides the locale, so
+// clearing the other two leaves only the one being tested.
+void useLocale(ScopedEnvironment& environment, const char* lcAll, const char* lang = nullptr)
+{
+    environment.set("LC_ALL", lcAll);
+    environment.set("LC_CTYPE", nullptr);
+    environment.set("LANG", lang);
+    environment.set("WHIST_ASCII", nullptr);
+}
+}
+
+TEST_CASE("The locale decides how outside text is checked", "[app-options]")
+{
+    ScopedEnvironment environment;
+
+    SECTION("a UTF-8 locale")
+    {
+        useLocale(environment, "en_US.UTF-8");
+        CHECK(parse({}).options.encoding == DisplayText::Encoding::Utf8);
+    }
+
+    SECTION("the C locale")
+    {
+        useLocale(environment, "C");
+        CHECK(parse({}).options.encoding == DisplayText::Encoding::EightBit);
+    }
+
+    SECTION("a Latin-2 locale named only in LANG")
+    {
+        useLocale(environment, nullptr, "ro_RO.ISO-8859-2");
+        CHECK(parse({}).options.encoding == DisplayText::Encoding::EightBit);
+    }
+
+    SECTION("no locale at all")
+    {
+        useLocale(environment, nullptr);
+        CHECK(parse({}).options.encoding == DisplayText::Encoding::EightBit);
+    }
+}
+
+TEST_CASE("Asking for ASCII glyphs leaves the encoding alone", "[app-options]")
+{
+    // The terminal still reads what the locale says, so text from outside must
+    // still be checked as UTF-8.
+    ScopedEnvironment environment;
+    useLocale(environment, "en_US.UTF-8");
+
+    SECTION("the ascii flag")
+    {
+        const ParseResult result = parse({ "--ascii" });
+
+        CHECK_FALSE(result.options.unicode);
+        CHECK(result.options.encoding == DisplayText::Encoding::Utf8);
+    }
+
+    SECTION("WHIST_ASCII")
+    {
+        environment.set("WHIST_ASCII", "1");
+        const ParseResult result = parse({});
+
+        CHECK_FALSE(result.options.unicode);
+        CHECK(result.options.encoding == DisplayText::Encoding::Utf8);
+    }
+}
+
+TEST_CASE("A bad argument is escaped for the terminal the locale names", "[app-options]")
+{
+    // U+011B in UTF-8, whose second byte an 8-bit terminal obeys as CSI.
+    ScopedEnvironment environment;
+
+    SECTION("8-bit")
+    {
+        useLocale(environment, "C");
+        const ParseResult result = parse({ "--x\xC4\x9B" "2J" });
+
+        REQUIRE_FALSE(result.ok);
+        CHECK_THAT(result.error, Catch::Matchers::ContainsSubstring("--x\xC4" "\\x9B2J"));
+        CHECK(result.error.find('\x9B') == std::string::npos);
+    }
+
+    SECTION("UTF-8")
+    {
+        useLocale(environment, "en_US.UTF-8");
+        const ParseResult result = parse({ "--x\xC4\x9B" "2J" });
+
+        REQUIRE_FALSE(result.ok);
+        CHECK_THAT(result.error, Catch::Matchers::ContainsSubstring("--x\xC4\x9B" "2J"));
+    }
+}
+
+#endif

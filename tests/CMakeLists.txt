@@ -1,15 +1,10 @@
-include(FetchContent)
-FetchContent_Declare(
-    Catch2
-    GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-    GIT_TAG v3.16.0
-)
 FetchContent_MakeAvailable(Catch2)
 
 add_executable(terminal_tests
     HandLayoutTests.cpp
     AppOptionsTests.cpp
     CardFormatTests.cpp
+    DisplayTextTests.cpp
     InputTests.cpp
     RendererTests.cpp
 )

@@ -107,13 +107,20 @@ std::string Input::readLine(const Redraw& redraw)
 
 std::string Input::readName(unsigned int maxLength,
                             const std::vector<std::string>& taken,
+                            DisplayText::Encoding encoding,
                             const Redraw& redraw)
 {
     while(true)
     {
         const std::string name = readLine(redraw);
 
-        if(name.size() > maxLength)
+        if(!DisplayText::isPrintable(name, encoding))
+        {
+            redraw("That name has a character that cannot be shown. Pick another name.");
+            continue;
+        }
+
+        if(DisplayText::characterCount(name, encoding) > maxLength)
         {
             redraw("Keep it to " + std::to_string(maxLength) + " characters or fewer.");
             continue;

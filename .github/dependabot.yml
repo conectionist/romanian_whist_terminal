@@ -1,0 +1,15 @@
+version: 2
+
+updates:
+  # Only the workflow's actions. Dependabot cannot read CMake's FetchContent, so
+  # Catch2 is updated by hand, and the engine submodule is moved to tagged
+  # releases by hand rather than to the tip of its branch.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    # One pull request for all of them, rather than one per action.
+    groups:
+      actions:
+        patterns:
+          - "*"

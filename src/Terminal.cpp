@@ -132,6 +132,11 @@ bool Terminal::unicodeEnabled() const
     return options.unicode;
 }
 
+DisplayText::Encoding Terminal::encoding() const
+{
+    return options.encoding;
+}
+
 bool Terminal::screenControlEnabled() const
 {
     return options.screenControl;
