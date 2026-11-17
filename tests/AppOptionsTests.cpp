@@ -177,6 +177,29 @@ TEST_CASE("An unrecognised argument is an error with something to say", "[app-op
     REQUIRE_FALSE(result.error.empty());
 }
 
+TEST_CASE("A bad argument is echoed with its control characters written out", "[app-options]")
+{
+    // The error is printed to the terminal, which would obey an escape sequence
+    // in it rather than show it.
+    SECTION("unrecognised option")
+    {
+        const ParseResult result = parse({ "--x\x1B]0;title\x07" });
+
+        REQUIRE_FALSE(result.ok);
+        CHECK_THAT(result.error, Catch::Matchers::ContainsSubstring("--x\\x1B]0;title\\x07"));
+        CHECK(result.error.find('\x1B') == std::string::npos);
+    }
+
+    SECTION("bad reckoner preset")
+    {
+        const ParseResult result = parse({ "--reckoner-preset=\x9B" "2J" });
+
+        REQUIRE_FALSE(result.ok);
+        CHECK_THAT(result.error, Catch::Matchers::ContainsSubstring("'\\x9B2J'"));
+        CHECK(result.error.find('\x9B') == std::string::npos);
+    }
+}
+
 TEST_CASE("The reckoner preset defaults to Gamma when unspecified", "[app-options]")
 {
     const ParseResult result = parse({});

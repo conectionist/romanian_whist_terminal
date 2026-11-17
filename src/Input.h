@@ -25,8 +25,9 @@ int readChoice(int lowest, int highest, const Redraw& redraw);
 // does not leave its tail queued up for the next prompt.
 std::string readLine(const Redraw& redraw);
 
-// As readLine, but also rejects names that contain a control character, are
-// longer than maxLength, or match one already in `taken` (case-insensitively).
+// As readLine, but also rejects names that are not well-formed UTF-8, contain a
+// control character, are longer than maxLength, or match one already in `taken`
+// (case-insensitively).
 std::string readName(unsigned int maxLength,
                      const std::vector<std::string>& taken,
                      const Redraw& redraw);

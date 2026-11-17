@@ -38,6 +38,7 @@ add_library(terminal_core STATIC
     src/AppOptions.cpp
     src/Terminal.cpp
     src/CardFormat.cpp
+    src/DisplayText.cpp
     src/Input.cpp
     src/GameView.cpp
     src/HandLayout.cpp

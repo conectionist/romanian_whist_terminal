@@ -131,18 +131,19 @@ TEST_CASE("A name with an escape sequence in it is asked for again", "[input]")
     std::string error;
 
     CHECK(Input::readName(10, {}, [&error](const std::string& e) { error = e; }) == "Ana");
-    CHECK(error == "Names cannot contain control characters.");
+    CHECK(error == "That name has a character that cannot be shown. Pick another name.");
 }
 
-TEST_CASE("Every kind of control character in a name is refused", "[input]")
+TEST_CASE("Control characters and malformed UTF-8 in a name are refused", "[input]")
 {
-    // A tab, DEL, and U+009B, the one-character form of the escape that starts
-    // a colour or cursor sequence.
-    FakeInput input("An\ta\n" "An\x7F" "a\n" "\xC2\x9B" "31m\n" "Ana\n");
+    // A tab, DEL, U+009B (the one-character form of the escape that starts a
+    // colour or cursor sequence) encoded and as the raw byte an 8-bit terminal
+    // reads it as, and a lead byte left dangling at the end.
+    FakeInput input("An\ta\n" "An\x7F" "a\n" "\xC2\x9B" "31m\n" "\x9B" "31m\n" "Ana\xC2\n" "Ana\n");
     int refusals = 0;
 
     CHECK(Input::readName(10, {}, [&refusals](const std::string&) { refusals++; }) == "Ana");
-    CHECK(refusals == 3);
+    CHECK(refusals == 5);
 }
 
 TEST_CASE("Letters outside ASCII are allowed in a name", "[input]")

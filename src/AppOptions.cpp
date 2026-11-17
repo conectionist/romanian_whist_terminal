@@ -1,5 +1,7 @@
 #include "AppOptions.h"
 
+#include "DisplayText.h"
+
 #include <algorithm>
 #include <cctype>
 #include <cerrno>
@@ -165,7 +167,7 @@ bool parseReckonerPresetFlag(const char* argument,
         valueOut = romanian_whist::reckoner::ReckonerPreset::Delta;
     else
     {
-        errorOut = "Invalid value for --reckoner-preset: '" + std::string(text) +
+        errorOut = "Invalid value for --reckoner-preset: '" + DisplayText::escaped(text) +
                    "'\nExpected 'alpha', 'beta', 'gamma', or 'delta'.";
         return false;
     }
@@ -256,7 +258,7 @@ bool AppOptions::fromCommandLine(int argc,
         }
         else
         {
-            errorOut = std::string("Unrecognised option: ") + argument +
+            errorOut = "Unrecognised option: " + DisplayText::escaped(argument) +
                        "\nRun with --help to see the available options.";
             return false;
         }

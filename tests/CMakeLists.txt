@@ -4,6 +4,7 @@ add_executable(terminal_tests
     HandLayoutTests.cpp
     AppOptionsTests.cpp
     CardFormatTests.cpp
+    DisplayTextTests.cpp
     InputTests.cpp
     RendererTests.cpp
 )
