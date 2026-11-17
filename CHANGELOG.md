@@ -13,9 +13,14 @@ and runs with read-only access unless a job needs more.
 
 ### Changed
 
-- **A name with a control character in it is asked for again.** Names are printed to the terminal
-  as typed, so an escape sequence in one was obeyed rather than shown: it could recolour the
-  screen, move the cursor or retitle the window. Letters outside ASCII are still accepted.
+- **A name with a control character or malformed UTF-8 in it is asked for again.** Names are
+  printed to the terminal as typed, so an escape sequence in one was obeyed rather than shown: it
+  could recolour the screen, move the cursor or retitle the window. Letters outside ASCII are still
+  accepted.
+- **An unknown or malformed flag is echoed with its control characters written out**, as `\x1B`
+  and so on, rather than passed to the terminal.
+- **On Windows, typed input is read as UTF-8**, as output already was, so an accented letter in a
+  name arrives as UTF-8 rather than in the console's old code page.
 
 ## 2.5.1
 

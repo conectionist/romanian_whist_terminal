@@ -2,6 +2,7 @@
 
 A review of the terminal client and the engine it links, as of 2.5.1 (commit `85b6cfa`, engine
 `9ddc379`, October 2026). It answers one question: what risks do you take by running this program?
+The fixes it led to ship in 2.5.2.
 
 **Verdict: safe to run.** The game cannot read or write your files, cannot reach the network and
 cannot start other programs. Testing found no memory errors. The realistic risk is in how the
@@ -14,25 +15,29 @@ two are left open, with reasons.
   the engine, read the build files and the checks it makes on what a client hands it.
 - Listed every function the Linux release binary imports from the C and C++ runtimes.
 - Built the client and the engine with AddressSanitizer, UndefinedBehaviorSanitizer and
-  `-D_GLIBCXX_ASSERTIONS` (GCC 13) and ran both test suites: the client's 32 tests and the
+  `-D_GLIBCXX_ASSERTIONS` (GCC 13) and ran both test suites: the client's 38 tests and the
   engine's 188 all pass.
 - Fed that build 400 random input streams through the setup questions and the game. Most lines
   were a single digit, mixed with garbage, out-of-range and overflowing numbers, escape sequences,
   invalid UTF-8, NUL bytes and 5,000-character lines, and about half the streams ended mid-line.
-  307 of them played a whole game and 398 scored at least one round. None
-  produced a sanitizer report, a crash or a hang.
+  306 of them played a whole game and 399 scored at least one round. None produced a sanitizer
+  report, a crash or a hang.
 - Tried hostile values for each environment variable the program reads (negative, overflowing,
   non-numeric, empty) and for each flag. Each was clamped, ignored or rejected with a message.
 - Searched the full history of both repositories for credentials. There are none.
+- Had the fixes reviewed separately, by a code review that did not see these notes. It found that
+  the name check missed raw 8-bit control bytes and malformed UTF-8, and that the Catch2 pin could
+  be bypassed. Both are fixed below.
 
 ## What the program can do
 
-The release binary's whole reach outside its own memory is:
+The Linux release binary's whole reach outside its own memory is:
 
 | Call | What for |
 |---|---|
 | `getenv` | `NO_COLOR`, `TERM`, `LC_ALL`, `LC_CTYPE`, `LANG`, `WHIST_ASCII`, `WHIST_DELAY_MS`, `COLUMNS`, `LINES` |
 | `isatty`, `ioctl(TIOCGWINSZ)` | Whether it is in a terminal, and how big the terminal is |
+| `read` on stdin, through the C++ runtime | Your answers, and the Enter that ends a pause |
 | `poll` on stdin | Letting Enter skip a wait |
 | `fwrite`, `write` to stdout | Drawing the screen |
 | `signal(SIGINT)`, `_exit` | Restoring the screen on Ctrl-C |
@@ -41,7 +46,8 @@ The release binary's whole reach outside its own memory is:
 It opens no files of its own (the C++ runtime may read `/dev/urandom` to seed the shuffle), so it
 saves nothing and reads nothing from your disk. It has no network code, so
 there is no telemetry and no update check. It needs no administrator rights. On Windows it also
-turns on escape-sequence processing and the UTF-8 code page for its console.
+turns on escape-sequence processing for its console, and switches the console's input and output to
+UTF-8.
 
 The Linux release build is a position-independent executable with full RELRO, a non-executable
 stack and stack protectors, which is what Ubuntu's GCC gives by default. The Windows and macOS
@@ -60,7 +66,9 @@ other code. CI builds and runs the tests in the same job that then uploads the r
 code slipped into Catch2 could have changed that binary before it was uploaded.
 
 Catch2 is now pinned to `317ac1ed4c0bb6e6b91eafc817e05c488feffcb3`, the commit `v3.16.0` points
-to. Moving to a newer Catch2 now means changing that commit by hand.
+to. Moving to a newer Catch2 now means changing that commit by hand. The pin is declared in the
+top-level `CMakeLists.txt`, before the engine is added, because CMake keeps the first declaration
+of a name: with `WHIST_BUILD_TESTS=ON`, the engine's declaration would otherwise win.
 
 The engine's own `tests/CMakeLists.txt` still fetches Catch2 by tag. That does not reach this
 client's binaries, because the engine's tests are not built when it is a submodule here, but it is
@@ -85,16 +93,25 @@ default, which on older repositories is read and write. They only need to read. 
 sets `contents: read` for every job, and the release job keeps the `contents: write` it already
 asked for. Pull requests from forks were read-only all along.
 
-### 4. Names could carry terminal escape sequences (fixed)
+### 4. Outside text could carry terminal escape sequences (fixed)
 
-A player name was printed exactly as typed. A name holding an escape sequence is obeyed by the
-terminal rather than shown: it can recolour the screen, move the cursor, change the window title
-and, in terminals that allow it, write to the clipboard.
+A player name was printed exactly as typed, and so was a bad flag in its error message. Text holding
+an escape sequence is obeyed by the terminal rather than shown: it can recolour the screen, move the
+cursor, change the window title and, in terminals that allow it, write to the clipboard.
 
 The risk was low. Only the person at the keyboard types names, or whoever wrote a file piped into
-the game, and the 10-byte limit leaves little room for a payload. Names containing a control
-character (C0, DEL or C1) are now refused and asked for again. Letters outside ASCII are still
-allowed.
+the game, and names are capped at 10 bytes. Only whoever runs the program chooses its flags.
+
+`src/DisplayText.cpp` now checks such text. A name is asked for again unless it is well-formed UTF-8
+with no control character: C0, DEL or C1, whether encoded or as the raw 8-bit byte that some
+terminals outside UTF-8 mode obey. Malformed UTF-8 is refused as well, because a lenient decoder can
+read an overlong form as a control, and a stray lead byte made the seat table's columns drift. A
+bad flag is echoed with each byte that would not print written out as `\xNN`.
+
+Letters outside ASCII are still allowed. On Windows the console's input is now switched to UTF-8,
+so that a typed accent arrives in that form. That has not been tried on a Windows machine. If an
+accented letter still arrives malformed on some console, the name is refused rather than drawn
+wrong.
 
 ### 5. Release binaries cannot be verified (open)
 
@@ -123,15 +140,18 @@ noted here so it does not come as a surprise.
 - **The shuffle is not cryptographic.** It is `std::mt19937` seeded with 32 bits from
   `std::random_device`, and `--seed` replays any game. That is right for a card game and wrong for
   anything with money on it.
-- **The Windows console keeps the UTF-8 code page** and escape-sequence processing after the game
-  exits. This is cosmetic.
+- **The Windows console keeps UTF-8 input and output** and escape-sequence processing after the
+  game exits. This is cosmetic.
+- **Text-direction characters are allowed in names.** A name can hold a right-to-left override,
+  which makes a terminal that supports bidirectional text draw the rest of that seat's row
+  reversed. It only garbles the screen of whoever typed it.
 - **One enormous line on stdin is read whole into memory.** Only the person running the program
   can send one.
 - **`COLUMNS` and `LINES` are read with `atoi`.** A value out of range is undefined in theory. In
   practice a bad value only changes the layout, and never causes a crash.
 - **Only Ctrl-C is caught.** If the game is killed any other way, with `kill` say, the terminal can
-  stay on the alternate screen; `reset` fixes it. The terminal is never put into raw mode, so typing keeps
-  working.
+  stay on the alternate screen; `reset` fixes it. The terminal is never put into raw mode, so typing
+  keeps working.
 
 ## Building from source
 
