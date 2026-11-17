@@ -22,8 +22,10 @@ and runs with read-only access unless a job needs more.
   longer counts as two.
 - **An unknown or malformed flag is echoed with its control characters written out**, as `\x1B`
   and so on, rather than passed to the terminal.
-- **On Windows, a name with an accented letter is refused** unless the console's input is UTF-8
-  (`chcp 65001`). Such a name used to be accepted and then drawn as the wrong characters.
+- **On Windows, a name with an accented letter is usually refused** unless the console's input is
+  UTF-8 (`chcp 65001`). Most such letters arrive in the console's own code page as bytes that are
+  not UTF-8. The few that happen to form UTF-8 are accepted and drawn as other letters, as every
+  such name used to be.
 
 ## 2.5.1
 

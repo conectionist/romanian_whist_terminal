@@ -15,7 +15,7 @@ two are left open, with reasons.
   the engine, read the build files and the checks it makes on what a client hands it.
 - Listed every function the Linux release binary imports from the C and C++ runtimes.
 - Built the client and the engine with AddressSanitizer, UndefinedBehaviorSanitizer and
-  `-D_GLIBCXX_ASSERTIONS` (GCC 13) and ran both test suites: the client's 42 tests and the
+  `-D_GLIBCXX_ASSERTIONS` (GCC 13) and ran both test suites: the client's 45 tests and the
   engine's 188 all pass.
 - Fed that build 400 random input streams through the setup questions and the game. Most lines
   were a single digit, mixed with garbage, out-of-range and overflowing numbers, escape sequences,
@@ -26,12 +26,19 @@ two are left open, with reasons.
 - Tried hostile values for each environment variable the program reads (negative, overflowing,
   non-numeric, empty) and for each flag. Each was clamped, ignored or rejected with a message.
 - Searched the full history of both repositories for credentials. There are none.
-- Had the fixes reviewed twice, each time by a code review that saw neither these notes nor the
-  other review. The first found that the name check missed raw 8-bit control bytes and malformed
-  UTF-8, and that the Catch2 pin could be bypassed. The second found that a valid UTF-8 letter can
-  still carry a byte an 8-bit terminal obeys, that the strict check refused accented names in
-  Latin-1 and Latin-2 locales, and that switching the Windows console's input to UTF-8 was
-  unreliable. All of these are fixed below.
+- Had the fixes reviewed three times, each time by a code review that saw neither these notes nor
+  the other reviews:
+  - The first found that the name check missed raw 8-bit control bytes and malformed UTF-8, and
+    that the Catch2 pin could be bypassed.
+  - The second found that a valid UTF-8 letter can still carry a byte an 8-bit terminal obeys, that
+    the strict check refused accented names in Latin-1 and Latin-2 locales, and that switching the
+    Windows console's input to UTF-8 was unreliable.
+  - The third looked only at the changes after the second. It found that the Catch2 pin was still
+    skipped for a parent project building only the engine's tests, that nothing tested how the
+    locale sets the encoding, and that some accented names typed on Windows are drawn wrong
+    rather than refused.
+
+  All of these are fixed or described below.
 
 ## What the program can do
 
@@ -110,23 +117,28 @@ the game, and names are capped at 10 characters. Only whoever runs the program c
 - **In a UTF-8 locale**, a name must be well-formed UTF-8 with no control character (C0, DEL or
   C1). Malformed UTF-8 is refused as well, because a lenient decoder can read an overlong form as a
   control, and a stray lead byte made the seat table's columns drift.
-- **In any other locale**, the terminal reads one byte per character and obeys every byte from 0x80
-  to 0x9F as a control, even one inside what would be a UTF-8 letter. Those bytes are refused, and
-  the rest of the high half, the Latin-1 and Latin-2 letters, is allowed.
+- **In any other locale**, the terminal is taken to read one byte per character, as Latin-1 and
+  Latin-2 do, and to obey every byte from 0x80 to 0x9F as a control, even one inside what would be
+  a UTF-8 letter. Those bytes are refused, and the rest of the high half, the Latin-1 and Latin-2
+  letters, is allowed. Multibyte locales such as GB18030 and Big5 get the same rules: they are rare
+  enough not to be treated apart, so a name typed in one may be refused or drawn wrong.
 
 A name that fails is asked for again, and the 10-character limit counts characters rather than
 bytes. A bad flag is echoed with each byte that would not print written out as `\xNN`.
 
 With no locale set at all, as is common over SSH, the game assumes a non-UTF-8 terminal, as it
 already did for the suit glyphs. A name with a letter such as Ș, whose UTF-8 form contains one of
-those bytes, is then refused even if the terminal does read UTF-8. That is the safe side of a guess
-the program cannot make reliably.
+those bytes, is then refused even if the terminal does read UTF-8, and a stray byte of malformed
+UTF-8 is accepted and can put that seat's row a column out. That is the safe side of a guess the
+program cannot make reliably.
 
 On Windows the check always takes UTF-8, because the game switches the console's output to it. The
-console's input stays on its own code page, so an accented letter typed there arrives as a byte
-that is not UTF-8, and the name is refused. In 2.5.1 such a name was accepted and then drawn as the
-wrong characters. Reading it properly means converting from the console's code page, which is left
-for later because it could not be tried on Windows here.
+console's input stays on its own code page, so most accented letters typed there arrive as bytes
+that are not UTF-8, and the name is refused. A few pairs of them happen to form valid UTF-8 and are
+drawn as other letters: "Răşcanu" typed on a Romanian console comes out as "Rǭcanu". Either way,
+what is printed is exactly what was checked, so no control character gets through. In 2.5.1 every
+such name was accepted and drawn wrong. Reading them properly means converting from the console's
+code page, which is left for later because it could not be tried on Windows here.
 
 ### 5. Release binaries cannot be verified (open)
 
