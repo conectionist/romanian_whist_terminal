@@ -85,15 +85,6 @@ bool enableWindowsVirtualTerminal()
 #endif
 }
 
-// A name is refused unless it is well-formed UTF-8, and on the console's default
-// code page an accented letter typed into one would arrive as a byte that is not.
-void readConsoleInputAsUtf8()
-{
-#ifdef _WIN32
-    SetConsoleCP(CP_UTF8);
-#endif
-}
-
 } // namespace
 
 Terminal::Terminal(AppOptions& _options) : options(_options),
@@ -113,8 +104,6 @@ Terminal::Terminal(AppOptions& _options) : options(_options),
         options.screenControl = false;
         options.altScreen = false;
     }
-
-    readConsoleInputAsUtf8();
 
     if(options.screenControl)
         std::signal(SIGINT, restoreTerminalOnInterrupt);
@@ -141,6 +130,11 @@ bool Terminal::colorEnabled() const
 bool Terminal::unicodeEnabled() const
 {
     return options.unicode;
+}
+
+DisplayText::Encoding Terminal::encoding() const
+{
+    return options.encoding;
 }
 
 bool Terminal::screenControlEnabled() const

@@ -55,7 +55,7 @@ std::string SetupWizard::askName(const std::string& title,
 
     renderer.drawQuestion(title, {}, prompt);
 
-    return Input::readName(MaximumNameLength, taken,
+    return Input::readName(MaximumNameLength, taken, terminal.encoding(),
         [this, &title, &prompt](const std::string& error)
         {
             renderer.drawQuestion(title, {}, prompt, error);

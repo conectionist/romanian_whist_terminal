@@ -1,7 +1,5 @@
 #include "AppOptions.h"
 
-#include "DisplayText.h"
-
 #include <algorithm>
 #include <cctype>
 #include <cerrno>
@@ -144,6 +142,7 @@ bool parseSeedFlag(const char* argument, std::optional<std::uint32_t>& valueOut)
 // Returns false with empty errorOut if argument does not start with "--reckoner-preset=".
 bool parseReckonerPresetFlag(const char* argument,
                              romanian_whist::reckoner::ReckonerPreset& valueOut,
+                             DisplayText::Encoding encoding,
                              std::string& errorOut)
 {
     constexpr const char* Prefix = "--reckoner-preset=";
@@ -167,7 +166,7 @@ bool parseReckonerPresetFlag(const char* argument,
         valueOut = romanian_whist::reckoner::ReckonerPreset::Delta;
     else
     {
-        errorOut = "Invalid value for --reckoner-preset: '" + DisplayText::escaped(text) +
+        errorOut = "Invalid value for --reckoner-preset: '" + DisplayText::escaped(text, encoding) +
                    "'\nExpected 'alpha', 'beta', 'gamma', or 'delta'.";
         return false;
     }
@@ -197,7 +196,13 @@ bool AppOptions::fromCommandLine(int argc,
     options.color = stdoutIsTerminal && !dumb && !environmentVariableSet("NO_COLOR");
     options.screenControl = stdoutIsTerminal && !dumb;
     options.altScreen = options.screenControl;
-    options.unicode = localeSupportsUnicode() && !environmentVariableSet("WHIST_ASCII");
+
+    // --ascii only changes which glyphs are drawn: the terminal still reads
+    // whatever the locale says it does.
+    options.encoding = localeSupportsUnicode() ? DisplayText::Encoding::Utf8
+                                               : DisplayText::Encoding::EightBit;
+    options.unicode = options.encoding == DisplayText::Encoding::Utf8 &&
+                      !environmentVariableSet("WHIST_ASCII");
 
     // Redirected output is almost always a log or a test fixture: nothing there
     // should hang waiting for a keypress that will never come.
@@ -250,7 +255,7 @@ bool AppOptions::fromCommandLine(int argc,
         else if(std::strncmp(argument, "--reckoner-preset=", 18) == 0)
         {
             std::string parseError;
-            if(!parseReckonerPresetFlag(argument, options.reckonerPreset, parseError))
+            if(!parseReckonerPresetFlag(argument, options.reckonerPreset, options.encoding, parseError))
             {
                 errorOut = parseError;
                 return false;
@@ -258,7 +263,7 @@ bool AppOptions::fromCommandLine(int argc,
         }
         else
         {
-            errorOut = "Unrecognised option: " + DisplayText::escaped(argument) +
+            errorOut = "Unrecognised option: " + DisplayText::escaped(argument, options.encoding) +
                        "\nRun with --help to see the available options.";
             return false;
         }

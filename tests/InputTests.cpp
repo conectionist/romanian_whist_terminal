@@ -75,6 +75,8 @@ std::string restOfInput()
 const Input::Redraw ignoreErrors = [](const std::string&) {};
 } // namespace
 
+using DisplayText::Encoding;
+
 TEST_CASE("Waiting for Enter after a choice waits for a new Enter", "[input]")
 {
     // The player picks a card, then presses Enter once at the trick's pause.
@@ -130,7 +132,7 @@ TEST_CASE("A name with an escape sequence in it is asked for again", "[input]")
     FakeInput input("\x1b]0;title\x07\nAna\n");
     std::string error;
 
-    CHECK(Input::readName(10, {}, [&error](const std::string& e) { error = e; }) == "Ana");
+    CHECK(Input::readName(10, {}, Encoding::Utf8, [&error](const std::string& e) { error = e; }) == "Ana");
     CHECK(error == "That name has a character that cannot be shown. Pick another name.");
 }
 
@@ -142,7 +144,7 @@ TEST_CASE("Control characters and malformed UTF-8 in a name are refused", "[inpu
     FakeInput input("An\ta\n" "An\x7F" "a\n" "\xC2\x9B" "31m\n" "\x9B" "31m\n" "Ana\xC2\n" "Ana\n");
     int refusals = 0;
 
-    CHECK(Input::readName(10, {}, [&refusals](const std::string&) { refusals++; }) == "Ana");
+    CHECK(Input::readName(10, {}, Encoding::Utf8, [&refusals](const std::string&) { refusals++; }) == "Ana");
     CHECK(refusals == 5);
 }
 
@@ -153,13 +155,36 @@ TEST_CASE("Letters outside ASCII are allowed in a name", "[input]")
     // controls share with ordinary characters such as the copyright sign.
     FakeInput input("\xC8\x98" "tefan\n" "\xC2\xA9" "Ana\n");
 
-    CHECK(Input::readName(10, {}, ignoreErrors) == "\xC8\x98" "tefan");
-    CHECK(Input::readName(10, {}, ignoreErrors) == "\xC2\xA9" "Ana");
+    CHECK(Input::readName(10, {}, Encoding::Utf8, ignoreErrors) == "\xC8\x98" "tefan");
+    CHECK(Input::readName(10, {}, Encoding::Utf8, ignoreErrors) == "\xC2\xA9" "Ana");
+}
+
+TEST_CASE("An 8-bit terminal takes its own letters but no C1 byte", "[input]")
+{
+    // A UTF-8 letter whose second byte an 8-bit terminal would read as CSI, then
+    // the same name as a Latin-2 terminal sends it.
+    FakeInput input("\xC4\x9B" "2J\n" "\xAA" "tefan\n");
+    int refusals = 0;
+
+    CHECK(Input::readName(10, {}, Encoding::EightBit, [&refusals](const std::string&) { refusals++; })
+          == "\xAA" "tefan");
+    CHECK(refusals == 1);
+}
+
+TEST_CASE("The length limit on a name counts characters, not bytes", "[input]")
+{
+    // Nine characters in twelve bytes, then eleven characters in eleven.
+    FakeInput input("Alexandrina\n" "\xC8\x98" "tef" "\xC4\x83" "nic" "\xC4\x83\n");
+    std::string error;
+
+    CHECK(Input::readName(10, {}, Encoding::Utf8, [&error](const std::string& e) { error = e; })
+          == "\xC8\x98" "tef" "\xC4\x83" "nic" "\xC4\x83");
+    CHECK(error == "Keep it to 10 characters or fewer.");
 }
 
 TEST_CASE("A name typed with a Windows line ending is accepted", "[input]")
 {
     FakeInput input("Ana\r\n");
 
-    CHECK(Input::readName(10, {}, ignoreErrors) == "Ana");
+    CHECK(Input::readName(10, {}, Encoding::Utf8, ignoreErrors) == "Ana");
 }

@@ -1,7 +1,5 @@
 #include "Input.h"
 
-#include "DisplayText.h"
-
 #include <algorithm>
 #include <cctype>
 #include <iostream>
@@ -109,19 +107,20 @@ std::string Input::readLine(const Redraw& redraw)
 
 std::string Input::readName(unsigned int maxLength,
                             const std::vector<std::string>& taken,
+                            DisplayText::Encoding encoding,
                             const Redraw& redraw)
 {
     while(true)
     {
         const std::string name = readLine(redraw);
 
-        if(!DisplayText::isPrintable(name))
+        if(!DisplayText::isPrintable(name, encoding))
         {
             redraw("That name has a character that cannot be shown. Pick another name.");
             continue;
         }
 
-        if(name.size() > maxLength)
+        if(DisplayText::characterCount(name, encoding) > maxLength)
         {
             redraw("Keep it to " + std::to_string(maxLength) + " characters or fewer.");
             continue;

@@ -1,6 +1,8 @@
 #ifndef INPUT_H
 #define INPUT_H
 
+#include "DisplayText.h"
+
 #include <functional>
 #include <string>
 #include <vector>
@@ -25,11 +27,12 @@ int readChoice(int lowest, int highest, const Redraw& redraw);
 // does not leave its tail queued up for the next prompt.
 std::string readLine(const Redraw& redraw);
 
-// As readLine, but also rejects names that are not well-formed UTF-8, contain a
-// control character, are longer than maxLength, or match one already in `taken`
+// As readLine, but also rejects a name the terminal would not show as typed, one
+// longer than maxLength characters, and one matching a name already in `taken`
 // (case-insensitively).
 std::string readName(unsigned int maxLength,
                      const std::vector<std::string>& taken,
+                     DisplayText::Encoding encoding,
                      const Redraw& redraw);
 
 // Waits for Enter. Returns immediately if stdin is not interactive.

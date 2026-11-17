@@ -1,7 +1,8 @@
 #include "DisplayText.h"
 
-#include <cstddef>
 #include <optional>
+
+using DisplayText::Encoding;
 
 namespace
 {
@@ -74,28 +75,49 @@ std::optional<CodePoint> decode(std::string_view text, std::size_t start)
     return CodePoint{ value, length };
 }
 
+// C0, DEL and C1. In an 8-bit encoding the same numbers are the control bytes.
 bool isControl(char32_t value)
 {
     return value < 0x20 || (value >= 0x7F && value <= 0x9F);
 }
 
+// The length in bytes of the printable character at text[start], or nothing if
+// the terminal would not show it.
+std::optional<std::size_t> printableAt(std::string_view text, std::size_t start, Encoding encoding)
+{
+    if(encoding == Encoding::EightBit)
+    {
+        const unsigned char byte = static_cast<unsigned char>(text[start]);
+        if(isControl(byte))
+            return std::nullopt;
+
+        return 1;
+    }
+
+    const std::optional<CodePoint> codePoint = decode(text, start);
+    if(!codePoint || isControl(codePoint->value))
+        return std::nullopt;
+
+    return codePoint->length;
+}
+
 } // namespace
 
-bool DisplayText::isPrintable(std::string_view text)
+bool DisplayText::isPrintable(std::string_view text, Encoding encoding)
 {
     for(std::size_t i = 0 ; i < text.size() ; )
     {
-        const std::optional<CodePoint> codePoint = decode(text, i);
-        if(!codePoint || isControl(codePoint->value))
+        const std::optional<std::size_t> length = printableAt(text, i, encoding);
+        if(!length)
             return false;
 
-        i += codePoint->length;
+        i += *length;
     }
 
     return true;
 }
 
-std::string DisplayText::escaped(std::string_view text)
+std::string DisplayText::escaped(std::string_view text, Encoding encoding)
 {
     constexpr const char* HexDigits = "0123456789ABCDEF";
 
@@ -104,12 +126,10 @@ std::string DisplayText::escaped(std::string_view text)
 
     for(std::size_t i = 0 ; i < text.size() ; )
     {
-        const std::optional<CodePoint> codePoint = decode(text, i);
-
-        if(codePoint && !isControl(codePoint->value))
+        if(const std::optional<std::size_t> length = printableAt(text, i, encoding))
         {
-            result += text.substr(i, codePoint->length);
-            i += codePoint->length;
+            result += text.substr(i, *length);
+            i += *length;
             continue;
         }
 
@@ -122,4 +142,20 @@ std::string DisplayText::escaped(std::string_view text)
     }
 
     return result;
+}
+
+std::size_t DisplayText::characterCount(std::string_view text, Encoding encoding)
+{
+    if(encoding == Encoding::EightBit)
+        return text.size();
+
+    std::size_t count = 0;
+
+    for(std::size_t i = 0 ; i < text.size() ; count++)
+    {
+        const std::optional<CodePoint> codePoint = decode(text, i);
+        i += codePoint ? codePoint->length : 1;
+    }
+
+    return count;
 }

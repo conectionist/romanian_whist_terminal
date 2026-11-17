@@ -43,6 +43,7 @@ public:
 
     bool colorEnabled() const;
     bool unicodeEnabled() const;
+    DisplayText::Encoding encoding() const;
     bool screenControlEnabled() const;
     bool interactive() const;
 

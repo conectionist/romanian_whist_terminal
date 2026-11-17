@@ -8,6 +8,8 @@
 
 #include <romanian_whist/strategies/reckoner/ReckonerKnobs.h>
 
+#include "DisplayText.h"
+
 // How the interface is allowed to draw itself, and how fast it plays.
 //
 // Every field starts at what a capable interactive terminal supports and is
@@ -23,6 +25,10 @@ struct AppOptions
     bool interactive = true;    // stdin and stdout are both terminals
     bool autoAdvance = false;   // never wait for Enter
     bool demo = false;          // skip setup: four bots, 1-8-1
+
+    // What the locale says the terminal reads, which decides the bytes it would
+    // obey as controls in text that comes from outside.
+    DisplayText::Encoding encoding = DisplayText::Encoding::Utf8;
 
     std::chrono::milliseconds playDelay{700};   // between one bot's play and the next
     std::chrono::milliseconds trickDwell{1200}; // how long a finished trick sits on screen
