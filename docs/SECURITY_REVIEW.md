@@ -70,12 +70,13 @@ worth the same fix in the engine's repository for its own CI.
 
 `softprops/action-gh-release` is a third-party action that runs with a token that can write to the
 repository. It was referenced as `@v3`, a tag its owner can move. It is now pinned to
-`efb35369e0ad2afab669f228072c1b0d510eae64`, which is v3.0.3 and what `v3` pointed to.
+`efb35369e0ad2afab669f228072c1b0d510eae64`, which is v3.0.3 and what `v3` pointed to at the time.
 
 GitHub's own actions (`checkout`, `upload-artifact`, `download-artifact`) stay on major-version
 tags. GitHub already runs the workflow, so trusting its actions adds little. Pinned commits do not
-update themselves; Dependabot's `github-actions` updates can bump them along with the version
-comment.
+update themselves, so Dependabot (`.github/dependabot.yml`) opens a pull request each month that
+bumps them along with their version comments. It cannot read CMake, so the Catch2 commit is still
+updated by hand.
 
 ### 3. CI jobs had the default token permissions (fixed)
 
