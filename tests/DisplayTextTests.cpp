@@ -29,7 +29,10 @@ TEST_CASE("Printable text, inside and outside ASCII, is printable", "[display-te
     {
         CAPTURE(DisplayText::escaped(text));
         CHECK(DisplayText::isPrintable(text));
-        CHECK(DisplayText::escaped(text) == text);
+
+        // Compared as std::string: Catch2 can print a string_view only when it
+        // was built as C++17 or later, and its macOS and Windows builds are not.
+        CHECK(DisplayText::escaped(text) == std::string(text));
     }
 }
 
