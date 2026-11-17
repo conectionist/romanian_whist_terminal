@@ -11,6 +11,25 @@ if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/libs/RomanianWhistEngine/CMakeLists.t
         "Run: git submodule update --init --recursive")
 endif()
 
+# Off when this project is consumed by another, exactly as the engine's
+# WHIST_BUILD_TESTS is - so nothing downstream builds or fetches our test
+# dependencies.
+option(WHIST_TERMINAL_BUILD_TESTS "Build the terminal client's test suite" ${PROJECT_IS_TOP_LEVEL})
+
+# Declared before the engine is added, because the first declaration of a name
+# wins and the engine's own tests declare Catch2 by tag.
+if(WHIST_TERMINAL_BUILD_TESTS)
+    include(FetchContent)
+
+    # Pinned to a commit, not a tag, because a tag can be moved and this code is
+    # built and run in the same CI job that builds the release binaries.
+    FetchContent_Declare(
+        Catch2
+        GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+        GIT_TAG 317ac1ed4c0bb6e6b91eafc817e05c488feffcb3 # v3.16.0
+    )
+endif()
+
 add_subdirectory(libs/RomanianWhistEngine)
 
 # Everything but main(), so the tests have something to link against. The
@@ -67,11 +86,6 @@ add_custom_command(TARGET terminal_romanian_whist POST_BUILD
         $<TARGET_FILE:terminal_romanian_whist>
         $<TARGET_FILE_DIR:terminal_romanian_whist>/terminal_romanian_whist${CMAKE_EXECUTABLE_SUFFIX}
 )
-
-# Off when this project is consumed by another, exactly as the engine's
-# WHIST_BUILD_TESTS is - so nothing downstream builds or fetches our test
-# dependencies.
-option(WHIST_TERMINAL_BUILD_TESTS "Build the terminal client's test suite" ${PROJECT_IS_TOP_LEVEL})
 
 if(WHIST_TERMINAL_BUILD_TESTS)
     enable_testing()
