@@ -13,14 +13,17 @@ and runs with read-only access unless a job needs more.
 
 ### Changed
 
-- **A name with a control character or malformed UTF-8 in it is asked for again.** Names are
-  printed to the terminal as typed, so an escape sequence in one was obeyed rather than shown: it
-  could recolour the screen, move the cursor or retitle the window. Letters outside ASCII are still
-  accepted.
+- **A name the terminal would obey rather than show is asked for again.** Names are printed to
+  the terminal as typed, so an escape sequence in one was obeyed rather than shown: it could
+  recolour the screen, move the cursor or retitle the window. In a UTF-8 locale a name must now be
+  well-formed UTF-8 with no control characters. In any other locale, the bytes such a terminal
+  treats as controls are refused, and its own accented letters are accepted.
+- **The 10-character limit on names counts characters, not bytes**, so an accented letter no
+  longer counts as two.
 - **An unknown or malformed flag is echoed with its control characters written out**, as `\x1B`
   and so on, rather than passed to the terminal.
-- **On Windows, typed input is read as UTF-8**, as output already was, so an accented letter in a
-  name arrives as UTF-8 rather than in the console's old code page.
+- **On Windows, a name with an accented letter is refused** unless the console's input is UTF-8
+  (`chcp 65001`). Such a name used to be accepted and then drawn as the wrong characters.
 
 ## 2.5.1
 

@@ -15,19 +15,23 @@ two are left open, with reasons.
   the engine, read the build files and the checks it makes on what a client hands it.
 - Listed every function the Linux release binary imports from the C and C++ runtimes.
 - Built the client and the engine with AddressSanitizer, UndefinedBehaviorSanitizer and
-  `-D_GLIBCXX_ASSERTIONS` (GCC 13) and ran both test suites: the client's 38 tests and the
+  `-D_GLIBCXX_ASSERTIONS` (GCC 13) and ran both test suites: the client's 42 tests and the
   engine's 188 all pass.
 - Fed that build 400 random input streams through the setup questions and the game. Most lines
   were a single digit, mixed with garbage, out-of-range and overflowing numbers, escape sequences,
   invalid UTF-8, NUL bytes and 5,000-character lines, and about half the streams ended mid-line.
+  Half the runs had a UTF-8 locale and half had none.
   306 of them played a whole game and 399 scored at least one round. None produced a sanitizer
   report, a crash or a hang.
 - Tried hostile values for each environment variable the program reads (negative, overflowing,
   non-numeric, empty) and for each flag. Each was clamped, ignored or rejected with a message.
 - Searched the full history of both repositories for credentials. There are none.
-- Had the fixes reviewed separately, by a code review that did not see these notes. It found that
-  the name check missed raw 8-bit control bytes and malformed UTF-8, and that the Catch2 pin could
-  be bypassed. Both are fixed below.
+- Had the fixes reviewed twice, each time by a code review that saw neither these notes nor the
+  other review. The first found that the name check missed raw 8-bit control bytes and malformed
+  UTF-8, and that the Catch2 pin could be bypassed. The second found that a valid UTF-8 letter can
+  still carry a byte an 8-bit terminal obeys, that the strict check refused accented names in
+  Latin-1 and Latin-2 locales, and that switching the Windows console's input to UTF-8 was
+  unreliable. All of these are fixed below.
 
 ## What the program can do
 
@@ -46,8 +50,7 @@ The Linux release binary's whole reach outside its own memory is:
 It opens no files of its own (the C++ runtime may read `/dev/urandom` to seed the shuffle), so it
 saves nothing and reads nothing from your disk. It has no network code, so
 there is no telemetry and no update check. It needs no administrator rights. On Windows it also
-turns on escape-sequence processing for its console, and switches the console's input and output to
-UTF-8.
+turns on escape-sequence processing for its console and switches the console's output to UTF-8.
 
 The Linux release build is a position-independent executable with full RELRO, a non-executable
 stack and stack protectors, which is what Ubuntu's GCC gives by default. The Windows and macOS
@@ -100,18 +103,30 @@ an escape sequence is obeyed by the terminal rather than shown: it can recolour 
 cursor, change the window title and, in terminals that allow it, write to the clipboard.
 
 The risk was low. Only the person at the keyboard types names, or whoever wrote a file piped into
-the game, and names are capped at 10 bytes. Only whoever runs the program chooses its flags.
+the game, and names are capped at 10 characters. Only whoever runs the program chooses its flags.
 
-`src/DisplayText.cpp` now checks such text. A name is asked for again unless it is well-formed UTF-8
-with no control character: C0, DEL or C1, whether encoded or as the raw 8-bit byte that some
-terminals outside UTF-8 mode obey. Malformed UTF-8 is refused as well, because a lenient decoder can
-read an overlong form as a control, and a stray lead byte made the seat table's columns drift. A
-bad flag is echoed with each byte that would not print written out as `\xNN`.
+`src/DisplayText.cpp` now checks such text against what the terminal reads, which the locale says:
 
-Letters outside ASCII are still allowed. On Windows the console's input is now switched to UTF-8,
-so that a typed accent arrives in that form. That has not been tried on a Windows machine. If an
-accented letter still arrives malformed on some console, the name is refused rather than drawn
-wrong.
+- **In a UTF-8 locale**, a name must be well-formed UTF-8 with no control character (C0, DEL or
+  C1). Malformed UTF-8 is refused as well, because a lenient decoder can read an overlong form as a
+  control, and a stray lead byte made the seat table's columns drift.
+- **In any other locale**, the terminal reads one byte per character and obeys every byte from 0x80
+  to 0x9F as a control, even one inside what would be a UTF-8 letter. Those bytes are refused, and
+  the rest of the high half, the Latin-1 and Latin-2 letters, is allowed.
+
+A name that fails is asked for again, and the 10-character limit counts characters rather than
+bytes. A bad flag is echoed with each byte that would not print written out as `\xNN`.
+
+With no locale set at all, as is common over SSH, the game assumes a non-UTF-8 terminal, as it
+already did for the suit glyphs. A name with a letter such as Ș, whose UTF-8 form contains one of
+those bytes, is then refused even if the terminal does read UTF-8. That is the safe side of a guess
+the program cannot make reliably.
+
+On Windows the check always takes UTF-8, because the game switches the console's output to it. The
+console's input stays on its own code page, so an accented letter typed there arrives as a byte
+that is not UTF-8, and the name is refused. In 2.5.1 such a name was accepted and then drawn as the
+wrong characters. Reading it properly means converting from the console's code page, which is left
+for later because it could not be tried on Windows here.
 
 ### 5. Release binaries cannot be verified (open)
 
@@ -140,11 +155,13 @@ noted here so it does not come as a surprise.
 - **The shuffle is not cryptographic.** It is `std::mt19937` seeded with 32 bits from
   `std::random_device`, and `--seed` replays any game. That is right for a card game and wrong for
   anything with money on it.
-- **The Windows console keeps UTF-8 input and output** and escape-sequence processing after the
-  game exits. This is cosmetic.
-- **Text-direction characters are allowed in names.** A name can hold a right-to-left override,
-  which makes a terminal that supports bidirectional text draw the rest of that seat's row
-  reversed. It only garbles the screen of whoever typed it.
+- **The Windows console keeps UTF-8 output** and escape-sequence processing after the game exits.
+  This is cosmetic.
+- **Names are checked for what the terminal obeys, not for how they look.** A name can still hold
+  a right-to-left override, characters drawn two columns wide or not at all, or nothing but
+  invisible spaces, and two names can look alike. In a non-UTF-8 locale, a Latin-1 letter from À
+  up also puts that seat's row a column or more out. Each of these only garbles the screen of
+  whoever typed the names, and scores are kept per seat, so look-alike names never share one.
 - **One enormous line on stdin is read whole into memory.** Only the person running the program
   can send one.
 - **`COLUMNS` and `LINES` are read with `atoi`.** A value out of range is undefined in theory. In
