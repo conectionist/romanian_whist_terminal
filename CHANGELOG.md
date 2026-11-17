@@ -3,6 +3,20 @@
 The version lives in `CMakeLists.txt` and is printed by `--version`, alongside the version of
 the engine this build is linked against.
 
+## 2.5.2
+
+**A security review, and the fixes it led to.** `docs/SECURITY_REVIEW.md` answers what you expose
+yourself to by running the game: what the program can reach on your system, how it was tested and
+what was found. In short, it cannot read or write your files, reach the network or start other
+programs. The CI that builds the release binaries now pins the code it downloads to exact commits
+and runs with read-only access unless a job needs more.
+
+### Changed
+
+- **A name with a control character in it is asked for again.** Names are printed to the terminal
+  as typed, so an escape sequence in one was obeyed rather than shown: it could recolour the
+  screen, move the cursor or retitle the window. Letters outside ASCII are still accepted.
+
 ## 2.5.1
 
 ### Fixed
