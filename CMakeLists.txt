@@ -17,8 +17,9 @@ endif()
 option(WHIST_TERMINAL_BUILD_TESTS "Build the terminal client's test suite" ${PROJECT_IS_TOP_LEVEL})
 
 # Declared before the engine is added, because the first declaration of a name
-# wins and the engine's own tests declare Catch2 by tag.
-if(WHIST_TERMINAL_BUILD_TESTS)
+# wins and the engine's own tests declare Catch2 by tag. Declaring downloads
+# nothing, so it is done whenever either suite could be built.
+if(PROJECT_IS_TOP_LEVEL OR WHIST_TERMINAL_BUILD_TESTS)
     include(FetchContent)
 
     # Pinned to a commit, not a tag, because a tag can be moved and this code is
