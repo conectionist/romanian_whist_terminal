@@ -3,6 +3,13 @@
 The version lives in `CMakeLists.txt` and is printed by `--version`, alongside the version of
 the engine this build is linked against.
 
+## 2.5.3
+
+**The streak bonus and penalty pay every fifth round, not only the first.** The engine moves to
+5.2.0, which starts a run of exact bids or misses over once it pays `+10` or `-10`. Ten exact bids
+in a row now earn the bonus twice, and the Streak column counts towards the next payout: W1 to W4,
+or L1 to L4.
+
 ## 2.5.2
 
 **A security review, and the fixes it led to.** `docs/SECURITY_REVIEW.md` answers what you expose
