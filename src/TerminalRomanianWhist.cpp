@@ -1,21 +1,21 @@
 #include "TerminalRomanianWhist.h"
 
-#include <cstdint>
-#include <optional>
-#include <stdexcept>
-
-
-#include <romanian_whist/Trick.h>
-#include <romanian_whist/Player.h>
 #include "ConsoleMoveProvider.h"
 #include "Input.h"
+
 #include <romanian_whist/AiMoveProvider.h>
+#include <romanian_whist/Player.h>
+#include <romanian_whist/Trick.h>
 #include <romanian_whist/strategies/CyborgStrategy.h>
 #include <romanian_whist/strategies/DuckingStrategy.h>
 #include <romanian_whist/strategies/FirstCardStrategy.h>
 #include <romanian_whist/strategies/LowRiskStrategy.h>
 #include <romanian_whist/strategies/RandomCardStrategy.h>
 #include <romanian_whist/strategies/ReckonerStrategy.h>
+
+#include <cstdint>
+#include <optional>
+#include <stdexcept>
 
 using namespace romanian_whist;
 

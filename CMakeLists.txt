@@ -116,8 +116,8 @@ target_link_libraries(terminal_romanian_whist PRIVATE terminal_core)
 whist_terminal_enable_warnings(terminal_core)
 whist_terminal_enable_warnings(terminal_romanian_whist)
 
-# Unversioned copy for local tooling (VSCode launch/tasks) that shouldn't need
-# updating on every version bump. Released/CI binaries use the versioned name.
+# Unversioned copy, so the commands in the README don't change with every
+# version bump. Released/CI binaries use the versioned name.
 add_custom_command(TARGET terminal_romanian_whist POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy
         $<TARGET_FILE:terminal_romanian_whist>

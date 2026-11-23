@@ -21,18 +21,11 @@
 
 namespace
 {
-struct ParseResult
-{
-    bool ok = false;
-    AppOptions options;
-    bool helpRequested = false;
-    bool versionRequested = false;
-    std::string error;
-};
+using Action = CommandLine::Action;
 
 // argv[0] is the program name, which the parser skips, so every case here gets
 // one prepended for it.
-ParseResult parse(std::vector<std::string> arguments)
+CommandLine parse(std::vector<std::string> arguments)
 {
     arguments.insert(arguments.begin(), "terminal_romanian_whist");
 
@@ -40,25 +33,15 @@ ParseResult parse(std::vector<std::string> arguments)
     for(std::string& argument : arguments)
         argv.push_back(argument.data());
 
-    ParseResult result;
-    result.ok = AppOptions::fromCommandLine(static_cast<int>(argv.size()),
-                                            argv.data(),
-                                            result.options,
-                                            result.helpRequested,
-                                            result.versionRequested,
-                                            result.error);
-
-    return result;
+    return AppOptions::fromCommandLine(static_cast<int>(argv.size()), argv.data());
 }
 }
 
 TEST_CASE("No arguments leaves the defaults alone", "[app-options]")
 {
-    const ParseResult result = parse({});
+    const CommandLine result = parse({});
 
-    REQUIRE(result.ok);
-    REQUIRE_FALSE(result.helpRequested);
-    REQUIRE_FALSE(result.versionRequested);
+    REQUIRE(result.action == Action::Run);
     REQUIRE_FALSE(result.options.seed.has_value());
     REQUIRE_FALSE(result.options.demo);
 }
@@ -67,25 +50,25 @@ TEST_CASE("The seed flag accepts a value and makes the game replayable", "[app-o
 {
     SECTION("an ordinary value")
     {
-        const ParseResult result = parse({ "--seed=42" });
+        const CommandLine result = parse({ "--seed=42" });
 
-        REQUIRE(result.ok);
+        REQUIRE(result.action == Action::Run);
         REQUIRE(result.options.seed == 42u);
     }
 
     SECTION("zero is a seed like any other, not an absent one")
     {
-        const ParseResult result = parse({ "--seed=0" });
+        const CommandLine result = parse({ "--seed=0" });
 
-        REQUIRE(result.ok);
+        REQUIRE(result.action == Action::Run);
         REQUIRE(result.options.seed == 0u);
     }
 
     SECTION("the largest value that fits")
     {
-        const ParseResult result = parse({ "--seed=4294967295" });
+        const CommandLine result = parse({ "--seed=4294967295" });
 
-        REQUIRE(result.ok);
+        REQUIRE(result.action == Action::Run);
         REQUIRE(result.options.seed == 4294967295u);
     }
 }
@@ -100,41 +83,41 @@ TEST_CASE("A malformed --seed is rejected rather than replaying the wrong game",
         // strtoull wraps a leading sign rather than rejecting it, so without an
         // explicit check this parses as 2^64-1 and fails a range test with a
         // confusing message instead of being read as the typo it is.
-        REQUIRE_FALSE(parse({ "--seed=-1" }).ok);
+        REQUIRE(parse({ "--seed=-1" }).action == Action::Error);
     }
 
     SECTION("an explicit plus")
     {
-        REQUIRE_FALSE(parse({ "--seed=+1" }).ok);
+        REQUIRE(parse({ "--seed=+1" }).action == Action::Error);
     }
 
     SECTION("past the top of the range")
     {
-        REQUIRE_FALSE(parse({ "--seed=4294967296" }).ok);
+        REQUIRE(parse({ "--seed=4294967296" }).action == Action::Error);
     }
 
     SECTION("no value at all")
     {
-        REQUIRE_FALSE(parse({ "--seed=" }).ok);
+        REQUIRE(parse({ "--seed=" }).action == Action::Error);
     }
 
     SECTION("not a number")
     {
-        REQUIRE_FALSE(parse({ "--seed=abc" }).ok);
+        REQUIRE(parse({ "--seed=abc" }).action == Action::Error);
     }
 
     SECTION("trailing rubbish after a good number")
     {
-        REQUIRE_FALSE(parse({ "--seed=42x" }).ok);
+        REQUIRE(parse({ "--seed=42x" }).action == Action::Error);
     }
 }
 
 TEST_CASE("Display and pacing flags are recognised", "[app-options]")
 {
-    const ParseResult result = parse({ "--no-color", "--ascii", "--no-clear",
+    const CommandLine result = parse({ "--no-color", "--ascii", "--no-clear",
                                        "--no-alt-screen", "--auto", "--demo" });
 
-    REQUIRE(result.ok);
+    REQUIRE(result.action == Action::Run);
     REQUIRE_FALSE(result.options.color);
     REQUIRE_FALSE(result.options.unicode);
     REQUIRE_FALSE(result.options.screenControl);
@@ -147,36 +130,44 @@ TEST_CASE("Help and version are reported rather than acted on", "[app-options]")
 {
     SECTION("--help")
     {
-        const ParseResult result = parse({ "--help" });
+        const CommandLine result = parse({ "--help" });
 
-        REQUIRE(result.ok);
-        REQUIRE(result.helpRequested);
+        REQUIRE(result.action == Action::Help);
     }
 
     SECTION("-h")
     {
-        REQUIRE(parse({ "-h" }).helpRequested);
+        REQUIRE(parse({ "-h" }).action == Action::Help);
     }
 
     SECTION("--version")
     {
-        const ParseResult result = parse({ "--version" });
+        const CommandLine result = parse({ "--version" });
 
-        REQUIRE(result.ok);
-        REQUIRE(result.versionRequested);
+        REQUIRE(result.action == Action::Version);
     }
 
     SECTION("-v")
     {
-        REQUIRE(parse({ "-v" }).versionRequested);
+        REQUIRE(parse({ "-v" }).action == Action::Version);
+    }
+
+    SECTION("--help wins over --version")
+    {
+        REQUIRE(parse({ "--version", "--help" }).action == Action::Help);
+    }
+
+    SECTION("a bad flag is an error even after --help")
+    {
+        REQUIRE(parse({ "--help", "--not-a-flag" }).action == Action::Error);
     }
 }
 
 TEST_CASE("An unrecognised argument is an error with something to say", "[app-options]")
 {
-    const ParseResult result = parse({ "--not-a-flag" });
+    const CommandLine result = parse({ "--not-a-flag" });
 
-    REQUIRE_FALSE(result.ok);
+    REQUIRE(result.action == Action::Error);
     REQUIRE_FALSE(result.error.empty());
 }
 
@@ -186,18 +177,18 @@ TEST_CASE("A bad argument is echoed with its control characters written out", "[
     // in it rather than show it.
     SECTION("unrecognised option")
     {
-        const ParseResult result = parse({ "--x\x1B]0;title\x07" });
+        const CommandLine result = parse({ "--x\x1B]0;title\x07" });
 
-        REQUIRE_FALSE(result.ok);
+        REQUIRE(result.action == Action::Error);
         CHECK_THAT(result.error, Catch::Matchers::ContainsSubstring("--x\\x1B]0;title\\x07"));
         CHECK(result.error.find('\x1B') == std::string::npos);
     }
 
     SECTION("bad reckoner preset")
     {
-        const ParseResult result = parse({ "--reckoner-preset=\x9B" "2J" });
+        const CommandLine result = parse({ "--reckoner-preset=\x9B" "2J" });
 
-        REQUIRE_FALSE(result.ok);
+        REQUIRE(result.action == Action::Error);
         CHECK_THAT(result.error, Catch::Matchers::ContainsSubstring("'\\x9B2J'"));
         CHECK(result.error.find('\x9B') == std::string::npos);
     }
@@ -205,9 +196,9 @@ TEST_CASE("A bad argument is echoed with its control characters written out", "[
 
 TEST_CASE("The reckoner preset defaults to Gamma when unspecified", "[app-options]")
 {
-    const ParseResult result = parse({});
+    const CommandLine result = parse({});
 
-    REQUIRE(result.ok);
+    REQUIRE(result.action == Action::Run);
     REQUIRE(result.options.reckonerPreset == romanian_whist::reckoner::ReckonerPreset::Gamma);
 }
 
@@ -217,41 +208,41 @@ TEST_CASE("The reckoner preset flag selects the requested preset", "[app-options
 
     SECTION("alpha")
     {
-        const ParseResult result = parse({ "--reckoner-preset=alpha" });
+        const CommandLine result = parse({ "--reckoner-preset=alpha" });
 
-        REQUIRE(result.ok);
+        REQUIRE(result.action == Action::Run);
         REQUIRE(result.options.reckonerPreset == ReckonerPreset::Alpha);
     }
 
     SECTION("beta")
     {
-        const ParseResult result = parse({ "--reckoner-preset=beta" });
+        const CommandLine result = parse({ "--reckoner-preset=beta" });
 
-        REQUIRE(result.ok);
+        REQUIRE(result.action == Action::Run);
         REQUIRE(result.options.reckonerPreset == ReckonerPreset::Beta);
     }
 
     SECTION("gamma")
     {
-        const ParseResult result = parse({ "--reckoner-preset=gamma" });
+        const CommandLine result = parse({ "--reckoner-preset=gamma" });
 
-        REQUIRE(result.ok);
+        REQUIRE(result.action == Action::Run);
         REQUIRE(result.options.reckonerPreset == ReckonerPreset::Gamma);
     }
 
     SECTION("delta")
     {
-        const ParseResult result = parse({ "--reckoner-preset=delta" });
+        const CommandLine result = parse({ "--reckoner-preset=delta" });
 
-        REQUIRE(result.ok);
+        REQUIRE(result.action == Action::Run);
         REQUIRE(result.options.reckonerPreset == ReckonerPreset::Delta);
     }
 
     SECTION("case-insensitive")
     {
-        const ParseResult result = parse({ "--reckoner-preset=GAMMA" });
+        const CommandLine result = parse({ "--reckoner-preset=GAMMA" });
 
-        REQUIRE(result.ok);
+        REQUIRE(result.action == Action::Run);
         REQUIRE(result.options.reckonerPreset == ReckonerPreset::Gamma);
     }
 }
@@ -260,25 +251,25 @@ TEST_CASE("A malformed --reckoner-preset is rejected", "[app-options]")
 {
     SECTION("unknown value")
     {
-        const ParseResult result = parse({ "--reckoner-preset=unknown" });
+        const CommandLine result = parse({ "--reckoner-preset=unknown" });
 
-        REQUIRE_FALSE(result.ok);
+        REQUIRE(result.action == Action::Error);
         REQUIRE_FALSE(result.error.empty());
     }
 
     SECTION("empty value")
     {
-        const ParseResult result = parse({ "--reckoner-preset=" });
+        const CommandLine result = parse({ "--reckoner-preset=" });
 
-        REQUIRE_FALSE(result.ok);
+        REQUIRE(result.action == Action::Error);
         REQUIRE_FALSE(result.error.empty());
     }
 
     SECTION("a name the engine retired in 5.0.0")
     {
-        const ParseResult result = parse({ "--reckoner-preset=hard" });
+        const CommandLine result = parse({ "--reckoner-preset=hard" });
 
-        REQUIRE_FALSE(result.ok);
+        REQUIRE(result.action == Action::Error);
 
         // The CHANGELOG promises a script still passing an old name is told the new ones.
         for(const char* name : { "alpha", "beta", "gamma", "delta" })
@@ -382,7 +373,7 @@ TEST_CASE("Asking for ASCII glyphs leaves the encoding alone", "[app-options]")
 
     SECTION("the ascii flag")
     {
-        const ParseResult result = parse({ "--ascii" });
+        const CommandLine result = parse({ "--ascii" });
 
         CHECK_FALSE(result.options.unicode);
         CHECK(result.options.encoding == DisplayText::Encoding::Utf8);
@@ -391,7 +382,7 @@ TEST_CASE("Asking for ASCII glyphs leaves the encoding alone", "[app-options]")
     SECTION("WHIST_ASCII")
     {
         environment.set("WHIST_ASCII", "1");
-        const ParseResult result = parse({});
+        const CommandLine result = parse({});
 
         CHECK_FALSE(result.options.unicode);
         CHECK(result.options.encoding == DisplayText::Encoding::Utf8);
@@ -406,9 +397,9 @@ TEST_CASE("A bad argument is escaped for the terminal the locale names", "[app-o
     SECTION("8-bit")
     {
         useLocale(environment, "C");
-        const ParseResult result = parse({ "--x\xC4\x9B" "2J" });
+        const CommandLine result = parse({ "--x\xC4\x9B" "2J" });
 
-        REQUIRE_FALSE(result.ok);
+        REQUIRE(result.action == Action::Error);
         CHECK_THAT(result.error, Catch::Matchers::ContainsSubstring("--x\xC4" "\\x9B2J"));
         CHECK(result.error.find('\x9B') == std::string::npos);
     }
@@ -416,9 +407,9 @@ TEST_CASE("A bad argument is escaped for the terminal the locale names", "[app-o
     SECTION("UTF-8")
     {
         useLocale(environment, "en_US.UTF-8");
-        const ParseResult result = parse({ "--x\xC4\x9B" "2J" });
+        const CommandLine result = parse({ "--x\xC4\x9B" "2J" });
 
-        REQUIRE_FALSE(result.ok);
+        REQUIRE(result.action == Action::Error);
         CHECK_THAT(result.error, Catch::Matchers::ContainsSubstring("--x\xC4\x9B" "2J"));
     }
 }

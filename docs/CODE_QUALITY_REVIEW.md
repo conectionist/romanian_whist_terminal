@@ -134,7 +134,11 @@ was ported from this one. A change to the display order in one client will not r
 
 ## Suggestions, most important first
 
-### 1. Record a seeded game as a golden test
+### 1. Record a seeded game as a golden test (done)
+
+Done in #34, which runs the transcript test in the Linux CI job only, because the Reckoner's floats differ
+between platforms. The unit tests are in #31 (the move provider's hints) and #36 (`refreshFromEngine()`
+and the frame).
 
 The demo is already deterministic: `--demo --no-animate --seed=42` with output piped prints the same
 19,040 lines every time. Commit that output as `tests/golden/demo-seed-42.txt` and add a CTest test
@@ -151,7 +155,9 @@ Then add unit tests where the logic is:
 - `refreshFromEngine()` against a seeded engine at known points of a game.
 - `Renderer::drawFrame()` on a hand-built `GameView`, for the compact layout and for each phase.
 
-### 2. Fix the trump hint and the stale comments
+### 2. Fix the trump hint and the stale comments (done)
+
+The hint is fixed in #31 (version 2.5.4). The comments are fixed in #40, #42 and #43.
 
 Tell the two cases apart by whether the player holds the suit led:
 
@@ -172,13 +178,17 @@ else
 Then correct the reason given in `Input.h` and `Input.cpp`, and remove the comments about what the
 code used to do.
 
-### 3. Turn warnings on, and make CI fail on them
+### 3. Turn warnings on, and make CI fail on them (done)
+
+Done in #33.
 
 Copy the engine's two options: `WHIST_TERMINAL_ENABLE_WARNINGS` (on when top-level) adds
 `-Wall -Wextra -Wpedantic -Wshadow` or `/W4` to `terminal_core`, the executable and the tests, and
 `WHIST_TERMINAL_WARNINGS_AS_ERRORS` adds `-Werror` or `/WX`. CI configures with the second one on.
 
-### 4. Replace `-1` with `std::optional`, and drop `default:` from enum switches
+### 4. Replace `-1` with `std::optional`, and drop `default:` from enum switches (done)
+
+Done in #38.
 
 ```cpp
 std::optional<romanian_whist::Seat> humanSeat;
@@ -194,14 +204,18 @@ bool isHumanSeat(romanian_whist::Seat seat) const
 empty, so the `>= 0` checks and the casts go. In `getReckonerKnobs()` and `isReckoner()`, list every
 enumerator and remove `default:`, so the compiler names any level a future change forgets.
 
-### 5. Share the display order with the desktop client
+### 5. Share the display order with the desktop client (moved)
+
+Moved to the engine, as conectionist/romanian_whist_engine#46, because it changes three repositories.
 
 The display order and the hand layout are the same rules in both clients. Move them into the
 engine, for example as `romanian_whist/display/HandLayout.h`, so the clients cannot drift apart.
 They are presentation rather than rules, but they depend only on engine types, and both clients
 already depend on the engine.
 
-### 6. Smaller tidying
+### 6. Smaller tidying (done, except `.clang-format`)
+
+Done in #45, except `.clang-format`, which is #32.
 
 - Return a result from `AppOptions::fromCommandLine()` instead of filling output parameters.
 - Order the includes, rename the private `layOutHand()` (for example `showHand()`), and drop the
