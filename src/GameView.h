@@ -122,9 +122,8 @@ struct GameView
 };
 
 // Refills everything readable straight from the engine: seats, scores, bets,
-// streaks, hand sizes, round and trick counts, trump and round type - and the
-// trick on the table, which the engine now holds rather than the client
-// accumulating it card by card.
+// streaks, hand sizes, round and trick counts, trump and round type, and the
+// cards on the table.
 //
 // A pure function of the engine. What is left to the caller is only what the
 // engine does not model: which seat is active, the human's numbered hand

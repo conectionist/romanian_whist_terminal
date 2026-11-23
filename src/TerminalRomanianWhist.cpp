@@ -187,8 +187,8 @@ void TerminalRomanianWhist::startGame()
     // is registered above it.
     game.start(std::move(setup));
 
-    // Everything that used to be loop() and playCurrentRoundTricks(). The
-    // callbacks below are called from inside here, on this thread.
+    // The engine plays the whole game from here, calling the callbacks below on
+    // this thread.
     game.run();
 
     // Off the alternate screen first, so the result is still there after the

@@ -46,9 +46,8 @@ public:
     // scrollback once the program exits.
     //
     // `winners` comes from GameEngine::getWinners() rather than being picked
-    // out of `standings` here: the engine decides who won a drawn game, and a
-    // client that decides it for itself is how this came to announce one winner
-    // of a three-way draw in the first place.
+    // out of `standings` here, so the engine decides a draw and every seat that
+    // shares first place is named.
     void drawGameOver(const std::vector<romanian_whist::Standing>& standings,
                       const std::vector<romanian_whist::Standing>& winners) const;
 

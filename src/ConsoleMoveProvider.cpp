@@ -43,9 +43,8 @@ std::vector<std::size_t> ConsoleMoveProvider::layOutHand(const std::vector<Card>
 
 unsigned int ConsoleMoveProvider::makeBet(const BetContext& context)
 {
-    // Every card is shown, none numbered: this is the bidding screen, and the
-    // player is choosing a number of tricks rather than a card. Seeing the hand
-    // here at all is the point - the bid used to be asked for blind.
+    // Every card is shown, none numbered: the player is choosing a number of
+    // tricks rather than a card, and bids knowing their hand.
     //
     // Forehead and Hidden both mean this seat's own hand is off limits while
     // bidding - the provider only ever bids for its own seat, so roundType

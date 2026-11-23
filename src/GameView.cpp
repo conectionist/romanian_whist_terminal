@@ -19,9 +19,8 @@ const SeatView* GameView::humanSeatView() const
 
 namespace
 {
-// What the game loop used to accumulate in the client, one push_back per card.
-// The engine holds the trick now, and every entry carries the seat that played
-// it - so this reads the table off rather than reconstructing it.
+// Reads the trick off the engine, which keeps every card played together with
+// the seat that played it.
 void rebuildTable(GameView& view, const GameEngine& game)
 {
     const romanian_whist::Trick& trick = game.getCurrentTrick();
@@ -85,10 +84,9 @@ void refreshFromEngine(GameView& view, const GameEngine& game)
         seat.seatIndex = i;
         seat.isHuman = view.humanSeat == romanian_whist::Seat{i};
 
-        // Bidding runs from whoever opened the round, wrapping round the
-        // table. The engine works that out now - reimplementing the modular
-        // arithmetic here is exactly the sort of turn-order rule that has no
-        // business living in a client.
+        // Bidding runs from whoever opened the round, wrapping round the table.
+        // That is a turn-order rule, so it is asked of the engine rather than
+        // worked out here.
         seat.bidOrder = game.getBiddingOrder(romanian_whist::Seat{i});
 
         // Disengaged until this seat has bid, which is what tells a genuine
