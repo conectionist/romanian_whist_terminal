@@ -35,3 +35,21 @@ target_compile_definitions(terminal_tests PRIVATE
 list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
 include(Catch)
 catch_discover_tests(terminal_tests)
+
+# The whole client, end to end: a seeded demo replays the same game, so its
+# output is compared with a recorded transcript.
+#
+# Linux and GCC only. The demo's Reckoner bots choose cards by comparing floats
+# from std::exp and std::pow, and each platform's maths library rounds those
+# differently, so the same seed plays a different game elsewhere. The engine
+# pins its own Reckoner games on this toolchain alone, for the same reason.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    add_test(NAME demo_transcript
+             COMMAND ${CMAKE_COMMAND}
+                 -DEXE=$<TARGET_FILE:terminal_romanian_whist>
+                 -DEXPECTED=${CMAKE_CURRENT_SOURCE_DIR}/golden/demo-seed-42.txt
+                 -DACTUAL=${CMAKE_CURRENT_BINARY_DIR}/demo-seed-42.txt
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/golden/CompareTranscript.cmake)
+
+    set_tests_properties(demo_transcript PROPERTIES LABELS golden TIMEOUT 60)
+endif()
