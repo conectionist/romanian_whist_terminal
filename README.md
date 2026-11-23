@@ -245,7 +245,6 @@ restore the screen on the way out.
 
 ## VSCode
 
-Build with <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>B</kbd>, or use the **run** task to build
-and launch. Debugging uses the "Build and debug terminal_romanian_whist" launch configuration.
-IntelliSense reads `build/compile_commands.json`, so configure once before expecting
-completions to resolve.
+The repository doesn't include editor settings. With the CMake Tools extension, choose the
+`default` preset to configure and build. Once the project is configured, IntelliSense can read
+`build/compile_commands.json`.
