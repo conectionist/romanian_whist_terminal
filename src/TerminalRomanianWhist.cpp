@@ -22,9 +22,6 @@ using namespace romanian_whist;
 namespace
 {
 
-// Every switch below names each value and has no default, so -Wswitch names
-// any value a new level or preset leaves out. The throw after each one is only
-// reached by a value outside the enum.
 bool isReckoner(AiLevel level)
 {
     switch(level)
@@ -44,6 +41,8 @@ bool isReckoner(AiLevel level)
             return false;
     }
 
+    // No default above, so -Wswitch names a level the switch leaves out. Only
+    // a value outside the enum gets here.
     throw std::logic_error("isReckoner: unknown AI level");
 }
 
@@ -57,6 +56,8 @@ reckoner::ReckonerKnobs knobsFor(reckoner::ReckonerPreset preset)
         case reckoner::ReckonerPreset::Delta: return reckoner::ReckonerKnobs::delta();
     }
 
+    // No default above, so -Wswitch names a preset the switch leaves out. Only
+    // a value outside the enum gets here.
     throw std::logic_error("knobsFor: unknown Reckoner preset");
 }
 
@@ -79,15 +80,16 @@ reckoner::ReckonerKnobs getReckonerKnobs(AiLevel level, reckoner::ReckonerPreset
             break;
     }
 
+    // Only Reckoner levels have knobs, and buildSetup() asks for no others.
     throw std::logic_error("getReckonerKnobs: not a Reckoner level");
 }
 
 // `seed` is unset unless --seed was given. Only RandomCardStrategy reads it -
-// the other three are deterministic already - but it is offset per seat so that
+// the other three are deterministic already - but it is offset per bot so that
 // two random bots in the same game do not draw the identical stream.
 std::unique_ptr<IStrategy> makeStrategy(AiLevel level,
                                         const std::optional<std::uint32_t>& seed,
-                                        std::size_t seatIndex)
+                                        std::size_t aiIndex)
 {
     switch(level)
     {
@@ -97,7 +99,7 @@ std::unique_ptr<IStrategy> makeStrategy(AiLevel level,
 
         case AiLevel::Random:
             if(seed)
-                return std::make_unique<RandomCardStrategy>(*seed + static_cast<std::uint32_t>(seatIndex));
+                return std::make_unique<RandomCardStrategy>(*seed + static_cast<std::uint32_t>(aiIndex));
 
             return std::make_unique<RandomCardStrategy>();
 
