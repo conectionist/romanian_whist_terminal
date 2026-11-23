@@ -126,8 +126,9 @@ std::string Input::readName(unsigned int maxLength,
             continue;
         }
 
-        // Bets and results are stored per name, so two players sharing one would
-        // share a score. Reject rather than silently corrupt the round.
+        // The engine refuses two seats with one name by throwing, which would end
+        // the program before the game starts. Names that differ only in case are
+        // refused too, because they would be hard to tell apart on screen.
         const bool duplicate = std::any_of(taken.begin(), taken.end(),
             [&name](const std::string& other) { return Input::equalIgnoringCase(other, name); });
 

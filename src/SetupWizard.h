@@ -53,10 +53,7 @@ struct GameConfig
 
 // Asks what kind of game to play.
 //
-// Every answer is bounded. That is not only tidiness: the engine builds its deck
-// from the player count with no range check of its own, so an out-of-range count
-// reaching it is undefined behaviour, and it stores bets against player names,
-// so two players sharing one silently share a score.
+// Every answer is bounded, so the engine accepts the setup it returns.
 class SetupWizard
 {
 private:
@@ -67,8 +64,8 @@ private:
     // table's name column.
     static constexpr unsigned int MaximumNameLength = 10;
 
-    // The engine deals from a deck sized by player count and cannot go above
-    // this without indexing off the end of the ranks.
+    // The engine refuses more than six players by throwing, which would end the
+    // program before the game starts.
     static constexpr int MaximumPlayers = 6;
 
     int ask(const std::string& title, const std::vector<std::string>& options) const;

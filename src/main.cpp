@@ -42,9 +42,9 @@ int main(int argc, char** argv)
     }
     catch(const std::exception& e)
     {
-        // Reaches here when stdin closes mid-game (Ctrl-D, or piped input
-        // running out). Unwinding beats exiting from inside the input code:
-        // it lets Terminal's destructor restore the screen on the way out.
+        // Reaches here when stdin closes mid-game, or when the engine refuses the
+        // setup. Unwinding, rather than exiting where it happened, lets
+        // Terminal's destructor restore the screen on the way out.
         std::cerr << "\n" << e.what() << " Exiting." << std::endl;
         return 1;
     }
