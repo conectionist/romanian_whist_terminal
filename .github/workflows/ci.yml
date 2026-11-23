@@ -1,9 +1,8 @@
 name: CI
 
-# A pull request is built by its pull_request run, so push builds only master.
-# Building every pushed branch as well ran each PR's builds twice, and a pushed
-# tag rebuilt a commit master had already built. A branch with no PR can still
-# be built by hand with "Run workflow".
+# Push builds only master: a PR is built by its pull_request run, and building
+# every branch or tag on push would build those commits twice. A branch with no
+# PR can be built by hand with "Run workflow".
 on:
   push:
     branches: [master]

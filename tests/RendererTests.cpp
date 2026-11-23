@@ -11,19 +11,14 @@
 using romanian_whist::Seat;
 using romanian_whist::Standing;
 
-// The closing line of the result screen. Romanian Whist has no tie-breaker, so
-// a game can end with two, three or four seats level at the top - and the line
-// that announces it is the one place a draw either reads correctly or silently
-// becomes a single winner.
-//
-// The engine decides who won (GameEngine::getWinners()), so all this function
-// adds is the wording, and wording is exactly what a test can pin.
+// Renderer::winnerAnnouncement() writes the result screen's last line. With no
+// tie-breaker, up to six seats can share first place, and the line has to name
+// every one of them.
 
 namespace
 {
-// The renderer reads only the name and score, but a Standing is built whole
-// here so a field added to it later fails to compile rather than silently
-// defaulting.
+// The renderer reads only the name and score, but every field is set so each
+// winner looks like one the engine could return.
 Standing standing(unsigned int seat, const std::string& name, int score, unsigned int place)
 {
     return Standing{ Seat{seat}, name, score, place };
@@ -67,10 +62,12 @@ TEST_CASE("a draw names every winner", "[renderer]")
         const std::vector<Standing> winners{ standing(0, "Ana", 0, 1),
                                              standing(1, "Bogdan", 0, 1),
                                              standing(2, "Cristi", 0, 1),
-                                             standing(3, "Dan", 0, 1) };
+                                             standing(3, "Dan", 0, 1),
+                                             standing(4, "Elena", 0, 1),
+                                             standing(5, "Florin", 0, 1) };
 
         REQUIRE(Renderer::winnerAnnouncement(winners) ==
-                "Ana, Bogdan, Cristi and Dan tie for first with 0 points.");
+                "Ana, Bogdan, Cristi, Dan, Elena and Florin tie for first with 0 points.");
     }
 }
 
