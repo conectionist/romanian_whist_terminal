@@ -17,9 +17,6 @@ using romanian_whist::Suit;
 // numbered legal subset the player types a number from. Get the mapping wrong
 // and the player types 2 and plays a different card - which breaks no rule the
 // engine could object to, so nothing downstream would notice.
-//
-// Until this file, the only thing that had ever checked it was a one-off
-// analysis of a rendered transcript, which cannot run in CI.
 
 namespace
 {
