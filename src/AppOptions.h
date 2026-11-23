@@ -51,9 +51,8 @@ struct AppOptions
     static std::string helpText();
 };
 
-// What the command line asks for. A malformed flag is an error even after
-// --help, and --help wins over --version; the caller prints and exits for all
-// three. `options` holds every flag that was read.
+// `options` is complete unless the action is Error: parsing stops at the bad
+// flag, before the delay flags are applied.
 struct CommandLine
 {
     enum class Action

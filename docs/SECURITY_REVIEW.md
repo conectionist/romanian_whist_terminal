@@ -155,12 +155,13 @@ Windows needs paid certificates. Building from source avoids the question.
 This was left open because the release job only runs on master, so the change cannot be tried
 before it is merged.
 
-### 6. Opening the folder in VS Code runs CMake (open, by design)
+### 6. Opening the folder in VS Code ran CMake (fixed)
 
-`.vscode/settings.json` sets `cmake.configureOnOpen`, so the CMake Tools extension configures the
-project as soon as the folder is opened and trusted. That runs the CMake scripts and downloads
-Catch2. VS Code asks whether you trust the folder first, and the scripts do nothing but build. It is
-noted here so it does not come as a surprise.
+`.vscode/settings.json` set `cmake.configureOnOpen`, so the CMake Tools extension configured the
+project as soon as the folder was opened and trusted. That ran the CMake scripts and downloaded
+Catch2. VS Code asked whether you trusted the folder first, and the scripts do nothing but build.
+
+`.vscode/` is no longer in the repository (#45), so opening a fresh clone runs nothing.
 
 ## Not concerns
 

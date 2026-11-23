@@ -277,6 +277,8 @@ CommandLine AppOptions::fromCommandLine(int argc, char** argv)
     if(!options.screenControl)
         options.altScreen = false;
 
+    // A bad flag has already returned an error, even after --help. Of the two
+    // that print and exit, --help wins.
     if(helpRequested)
         result.action = CommandLine::Action::Help;
     else if(versionRequested)
