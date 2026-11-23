@@ -43,13 +43,12 @@ std::vector<std::size_t> ConsoleMoveProvider::layOutHand(const std::vector<Card>
 
 unsigned int ConsoleMoveProvider::makeBet(const BetContext& context)
 {
-    // Every card is shown, none numbered: the player is choosing a number of
-    // tricks rather than a card, and bids knowing their hand.
+    // In a Normal round every card is shown, none numbered: the player is
+    // choosing a number of tricks rather than a card, and bids knowing their hand.
     //
-    // Forehead and Hidden both mean this seat's own hand is off limits while
-    // bidding - the provider only ever bids for its own seat, so roundType
-    // alone says whether to show it, with no need to ask GameEngine::canSeeHand
-    // (that's for rendering every OTHER seat - see GameView::refreshFromEngine).
+    // In Forehead and Hidden rounds the player's own hand is off limits while
+    // bidding. This provider only bids for its own seat, so the round type alone
+    // decides it; GameEngine::canSeeHand is for the other seats' hands.
     const bool blind = context.roundType == RoundType::Forehead ||
                        context.roundType == RoundType::Hidden;
 

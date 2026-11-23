@@ -19,8 +19,8 @@ const SeatView* GameView::humanSeatView() const
 
 namespace
 {
-// Reads the trick off the engine, which keeps every card played together with
-// the seat that played it.
+// Seats come from the trick itself, so the client never has to work out turn
+// order to know who played what.
 void rebuildTable(GameView& view, const GameEngine& game)
 {
     const romanian_whist::Trick& trick = game.getCurrentTrick();
