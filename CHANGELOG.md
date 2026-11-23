@@ -7,7 +7,7 @@ the engine this build is linked against.
 
 ### Fixed
 
-- **The hint says "you must play a trump" when that is the rule**
+- **The hint says "you must play a trump (♠)" when that is the rule**
   ([#25](https://github.com/conectionist/romanian_whist_terminal/issues/25)). When you held none
   of the suit led but had a trump, the hint read "you must follow ♥", which is exactly what you
   could not do.

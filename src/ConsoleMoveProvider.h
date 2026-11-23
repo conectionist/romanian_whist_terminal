@@ -48,6 +48,7 @@ public:
     // check it: the frame it appears in goes straight to stdout.
     static std::string playHint(const std::vector<romanian_whist::Card>& hand,
                                 std::size_t legalCount,
+                                const std::optional<romanian_whist::Card>& trump,
                                 const std::optional<romanian_whist::Suit>& leadSuit,
                                 const CardFormat& cardFormat);
 };

@@ -112,7 +112,7 @@ std::optional<std::size_t> ConsoleMoveProvider::playCard(const PlayContext& cont
 
     const std::vector<std::size_t> choices = layOutHand(hand, legalCards, trump);
 
-    ui.view.hint = playHint(hand, choices.size(), leadSuit, ui.cardFormat);
+    ui.view.hint = playHint(hand, choices.size(), trump, leadSuit, ui.cardFormat);
 
     const int highest = static_cast<int>(choices.size());
     const std::string prompt = highest == 1
@@ -134,6 +134,7 @@ std::optional<std::size_t> ConsoleMoveProvider::playCard(const PlayContext& cont
 
 std::string ConsoleMoveProvider::playHint(const std::vector<Card>& hand,
                                           std::size_t legalCount,
+                                          const std::optional<Card>& trump,
                                           const std::optional<Suit>& leadSuit,
                                           const CardFormat& cardFormat)
 {
@@ -143,13 +144,18 @@ std::string ConsoleMoveProvider::playHint(const std::vector<Card>& hand,
     if(legalCount == hand.size())
         return {};
 
-    // Some cards are barred, so a rule applies: follow the suit led if you hold
-    // it, and if you don't, play a trump.
-    const bool holdsLeadSuit = std::ranges::any_of(hand,
-        [&leadSuit](const Card& card) { return card.suit == *leadSuit; });
+    const auto holds = [&hand](Suit suit)
+    {
+        return std::ranges::any_of(hand, [suit](const Card& card) { return card.suit == suit; });
+    };
 
-    if(holdsLeadSuit)
+    if(holds(*leadSuit))
         return "you must follow " + cardFormat.suitGlyph(*leadSuit);
 
-    return "you must play a trump";
+    if(trump && holds(trump->suit))
+        return "you must play a trump (" + cardFormat.suitGlyph(trump->suit) + ")";
+
+    // Cards are barred for a reason neither rule above explains, and a hint
+    // naming the wrong rule would be worse than none.
+    return {};
 }
