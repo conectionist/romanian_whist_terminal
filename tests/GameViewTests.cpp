@@ -12,6 +12,7 @@
 #include <romanian_whist/strategies/LowRiskStrategy.h>
 
 #include <cstddef>
+#include <map>
 #include <memory>
 #include <optional>
 #include <string>
@@ -20,8 +21,8 @@
 using namespace romanian_whist;
 
 // refreshFromEngine() checked against the engine it reads, at every callback
-// of a whole game. These bots don't draw at random and the deck shuffle is the
-// same on every platform, so the game is the same everywhere this runs.
+// the client draws a frame from, through a whole game. These bots don't draw at
+// random and the deck shuffle is portable, so the game is the same everywhere.
 namespace
 {
 const std::vector<std::string> Names{ "Ana", "Bogdan", "Cristi", "Dan" };
@@ -37,15 +38,16 @@ GameSetup fourBots()
     return setup;
 }
 
-// CHECK rather than REQUIRE: these run inside the engine's game loop, and a
-// failure should be reported without throwing through it.
+// Only CHECK, never REQUIRE: these run inside the engine's game loop, and a
+// failed REQUIRE would throw out of it and skip the checks after the game.
 class ViewChecker : public IGameObserver
 {
 public:
     GameView view;
 
-    unsigned int roundsOfType[3] = { 0, 0, 0 };
+    std::map<RoundType, unsigned int> roundsOfType;
     unsigned int cardsChecked = 0;
+    unsigned int tricksChecked = 0;
 
     explicit ViewChecker(std::optional<unsigned int> humanSeat)
     {
@@ -55,7 +57,8 @@ public:
     void onRoundStarted(const GameEngine& engine) override
     {
         refreshFromEngine(view, engine);
-        roundsOfType[static_cast<int>(engine.getCurrentRoundType())]++;
+        roundsOfType[engine.getCurrentRoundType()]++;
+        tricksWonThisRound.assign(Names.size(), 0);
 
         CHECK(view.roundNumber == engine.getCurrentRoundIndex() + 1);
         CHECK(view.roundCount == engine.getRoundCount());
@@ -67,7 +70,10 @@ public:
         if(trump)
             CHECK(view.trump == *trump);
 
-        REQUIRE(view.seats.size() == Names.size());
+        CHECK(view.seats.size() == Names.size());
+        if(view.seats.size() != Names.size())
+            return;
+
         for(std::size_t i = 0 ; i < Names.size() ; i++)
         {
             CHECK(view.seats[i].name == Names[i]);
@@ -103,31 +109,73 @@ public:
         CHECK(view.betSum == sum);
     }
 
+    void onBettingComplete(const GameEngine& engine) override
+    {
+        refreshFromEngine(view, engine);
+
+        CHECK(view.betsPlaced == Names.size());
+    }
+
+    void onTrickStarted(const GameEngine& engine, unsigned int, Seat leader) override
+    {
+        refreshFromEngine(view, engine);
+        trickLeader = leader;
+
+        CHECK(view.table.empty());
+        CHECK_FALSE(view.hasLeadSuit);
+        CHECK(view.leadSeat == leader.index);
+        checkVisibleHands(engine);
+    }
+
+    void onCardRequested(const GameEngine& engine, Seat seat) override
+    {
+        refreshFromEngine(view, engine);
+
+        CHECK(view.seats[seat.index].cardsLeft > 0);
+        CHECK(view.leadSeat == trickLeader.index);
+        checkVisibleHands(engine);
+    }
+
     void onCardPlayed(const GameEngine& engine, Seat seat, const Card& card) override
     {
         refreshFromEngine(view, engine);
         cardsChecked++;
 
-        REQUIRE_FALSE(view.table.empty());
+        CHECK_FALSE(view.table.empty());
+        if(view.table.empty())
+            return;
+
         CHECK(view.table.back().seatIndex == seat.index);
         CHECK(view.table.back().card == card);
 
-        CHECK(view.leadSeat == view.table.front().seatIndex);
+        CHECK(view.leadSeat == trickLeader.index);
+        CHECK(view.table.front().seatIndex == trickLeader.index);
         CHECK(view.hasLeadSuit);
         CHECK(view.leadSuit == view.table.front().card.suit);
 
-        unsigned int winning = 0;
-        for(const PlayedCardView& played : view.table)
-        {
-            if(played.isWinning)
-            {
-                winning++;
-                CHECK(played.seatIndex == engine.getCurrentTrickLeader()->index);
-            }
-        }
-        CHECK(winning == 1);
+        const std::optional<Seat> leading = engine.getCurrentTrickLeader();
+        CHECK(leading.has_value());
+        if(leading)
+            CHECK(winningSeats() == std::vector<unsigned int>{ leading->index });
 
         CHECK(view.seats[seat.index].cardsLeft == engine.getPlayers().at(seat.index).getHand().size());
+        checkVisibleHands(engine);
+    }
+
+    // The engine has already moved its trick leader on to the winner here, so
+    // this is where the table could be walked from the wrong seat.
+    void onTrickWon(const GameEngine& engine, Seat winner, unsigned int) override
+    {
+        refreshFromEngine(view, engine);
+        tricksChecked++;
+        tricksWonThisRound[winner.index]++;
+
+        CHECK(view.table.size() == Names.size());
+        CHECK(view.leadSeat == trickLeader.index);
+        CHECK(winningSeats() == std::vector<unsigned int>{ winner.index });
+
+        for(unsigned int i = 0 ; i < Names.size() ; i++)
+            CHECK(view.seats[i].tricksWon == tricksWonThisRound[i]);
     }
 
     void onRoundScored(const GameEngine& engine) override
@@ -143,6 +191,20 @@ public:
     }
 
 private:
+    Seat trickLeader{0};
+    std::vector<unsigned int> tricksWonThisRound;
+
+    std::vector<unsigned int> winningSeats() const
+    {
+        std::vector<unsigned int> seats;
+        for(const PlayedCardView& played : view.table)
+        {
+            if(played.isWinning)
+                seats.push_back(played.seatIndex);
+        }
+        return seats;
+    }
+
     // Normal rounds show the human their own hand only; Forehead rounds show
     // every other hand but not their own; Hidden rounds show none. A spectated
     // game shows no hand at all.
@@ -184,11 +246,13 @@ void playWith(ViewChecker& checker)
     engine.start(fourBots());
     engine.run();
 
-    // Every kind of round was reached, so every branch above was exercised.
-    CHECK(checker.roundsOfType[static_cast<int>(RoundType::Normal)] > 0);
-    CHECK(checker.roundsOfType[static_cast<int>(RoundType::Forehead)] > 0);
-    CHECK(checker.roundsOfType[static_cast<int>(RoundType::Hidden)] > 0);
+    // Every kind of round is reached, so a seated game checks each of the
+    // visibility rules above.
+    CHECK(checker.roundsOfType[RoundType::Normal] > 0);
+    CHECK(checker.roundsOfType[RoundType::Forehead] > 0);
+    CHECK(checker.roundsOfType[RoundType::Hidden] > 0);
     CHECK(checker.cardsChecked > 0);
+    CHECK(checker.tricksChecked > 0);
 
     // The view was last refreshed when the final round was scored, before its
     // score was added to the totals, so the two together are the final score.
