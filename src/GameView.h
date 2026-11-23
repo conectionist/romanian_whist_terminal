@@ -4,7 +4,9 @@
 #include <romanian_whist/Card.h>
 #include <romanian_whist/GameEngine.h>
 #include <romanian_whist/RoundType.h>
+#include <romanian_whist/Seat.h>
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -91,10 +93,10 @@ struct GameView
 
     std::vector<SeatView> seats;
 
-    // -1 when nobody is seated there: spectator games have no human, and
+    // Empty when nobody is seated there: spectator games have no human, and
     // between turns nobody is active.
-    int humanSeat = -1;
-    int activeSeat = -1;
+    std::optional<romanian_whist::Seat> humanSeat;
+    std::optional<romanian_whist::Seat> activeSeat;
     unsigned int leadSeat = 0;
 
     bool hasLeadSuit = false;

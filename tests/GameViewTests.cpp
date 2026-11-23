@@ -51,7 +51,8 @@ public:
 
     explicit ViewChecker(std::optional<unsigned int> humanSeat)
     {
-        view.humanSeat = humanSeat ? static_cast<int>(*humanSeat) : -1;
+        if(humanSeat)
+            view.humanSeat = Seat{*humanSeat};
     }
 
     void onRoundStarted(const GameEngine& engine) override
@@ -212,7 +213,7 @@ private:
     {
         const RoundType type = engine.getCurrentRoundType();
 
-        if(view.humanSeat < 0)
+        if(!view.humanSeat)
         {
             CHECK(view.hand.empty());
             for(const SeatView& seat : view.seats)
@@ -220,7 +221,7 @@ private:
             return;
         }
 
-        const auto human = static_cast<std::size_t>(view.humanSeat);
+        const std::size_t human = view.humanSeat->index;
 
         if(type == RoundType::Normal)
             CHECK(view.hand.size() == view.seats[human].cardsLeft);

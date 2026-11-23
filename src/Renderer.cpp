@@ -246,8 +246,7 @@ void Renderer::appendSeatTable(std::string& out, const GameView& view) const
     for(const SeatView* seatPtr : ordered)
     {
         const SeatView& seat = *seatPtr;
-        const bool active = view.activeSeat >= 0 &&
-                            static_cast<unsigned int>(view.activeSeat) == seat.seatIndex;
+        const bool active = view.activeSeat == romanian_whist::Seat{seat.seatIndex};
 
         std::string name = seat.name;
         if(seat.isHuman)
@@ -325,8 +324,7 @@ void Renderer::appendTrick(std::string& out, const GameView& view) const
             }
         }
 
-        const bool active = view.activeSeat >= 0 &&
-                            static_cast<unsigned int>(view.activeSeat) == seatIndex;
+        const bool active = view.activeSeat == romanian_whist::Seat{seatIndex};
 
         std::string row = std::string(IndentWidth, ' ') +
                           pad(active ? ">" : "", MarkerWidth) + "  " +

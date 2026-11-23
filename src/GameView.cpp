@@ -11,10 +11,10 @@ using romanian_whist::Round;
 
 const SeatView* GameView::humanSeatView() const
 {
-    if(humanSeat < 0 || static_cast<std::size_t>(humanSeat) >= seats.size())
+    if(!humanSeat || humanSeat->index >= seats.size())
         return nullptr;
 
-    return &seats[static_cast<std::size_t>(humanSeat)];
+    return &seats[humanSeat->index];
 }
 
 namespace
@@ -83,7 +83,7 @@ void refreshFromEngine(GameView& view, const GameEngine& game)
 
         seat.name = player.getName();
         seat.seatIndex = i;
-        seat.isHuman = view.humanSeat >= 0 && static_cast<unsigned int>(view.humanSeat) == i;
+        seat.isHuman = view.humanSeat == romanian_whist::Seat{i};
 
         // Bidding runs from whoever opened the round, wrapping round the
         // table. The engine works that out now - reimplementing the modular
@@ -119,11 +119,9 @@ void refreshFromEngine(GameView& view, const GameEngine& game)
         // once a human is actually seated.
         seat.hand.clear();
 
-        if(view.humanSeat >= 0 && i != static_cast<unsigned int>(view.humanSeat))
+        if(view.humanSeat && !seat.isHuman)
         {
-            const romanian_whist::Seat viewer{static_cast<unsigned int>(view.humanSeat)};
-
-            if(game.canSeeHand(viewer, romanian_whist::Seat{i}))
+            if(game.canSeeHand(*view.humanSeat, romanian_whist::Seat{i}))
                 seat.hand = layOutHand(player.getHand(), {}, trump).entries;
         }
     }
@@ -139,10 +137,10 @@ void refreshFromEngine(GameView& view, const GameEngine& game)
     view.hand.clear();
     view.legalCount = 0;
 
-    if(view.humanSeat < 0)
+    if(!view.humanSeat)
         return;
 
-    const romanian_whist::Seat humanSeat{static_cast<unsigned int>(view.humanSeat)};
+    const romanian_whist::Seat humanSeat = *view.humanSeat;
 
     // Forehead: the human cannot see their own hand while it is being bid on.
     // Hidden: nobody can. Both leave this cleared, same as spectator games.
@@ -152,7 +150,7 @@ void refreshFromEngine(GameView& view, const GameEngine& game)
     // The same layout the move provider draws, asked for with no legal set -
     // which is what says "nothing is being chosen here", so every card reads as
     // legal and none is numbered. legalCount stays 0 for the same reason.
-    view.hand = layOutHand(players.at(static_cast<std::size_t>(view.humanSeat)).getHand(),
+    view.hand = layOutHand(players.at(humanSeat.index).getHand(),
                            {},
                            trump).entries;
 }
