@@ -27,14 +27,16 @@ permissions:
 jobs:
   build-linux:
     name: Build (Linux)
-    runs-on: ubuntu-latest
+    # Pinned to one Ubuntu release: the demo transcript was recorded with its
+    # maths library, and the next release's can change the game a seed plays.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
         with:
           submodules: recursive
 
       - name: Configure
-        run: cmake --preset release -DWHIST_TERMINAL_WARNINGS_AS_ERRORS=ON
+        run: cmake --preset release -DWHIST_TERMINAL_WARNINGS_AS_ERRORS=ON -DWHIST_TERMINAL_GOLDEN_TEST=ON
 
       - name: Get project version
         id: version

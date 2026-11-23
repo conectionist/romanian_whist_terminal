@@ -35,3 +35,19 @@ target_compile_definitions(terminal_tests PRIVATE
 list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
 include(Catch)
 catch_discover_tests(terminal_tests)
+
+# Off by default: the demo's bots compare floats from std::exp and std::pow, so
+# the transcript replays only on the maths library it was recorded with, which
+# is the Linux CI job's. That job turns this on.
+option(WHIST_TERMINAL_GOLDEN_TEST "Compare the seeded demo with its recorded transcript" OFF)
+
+if(WHIST_TERMINAL_GOLDEN_TEST)
+    add_test(NAME demo_transcript
+             COMMAND ${CMAKE_COMMAND}
+                 -DEXE=$<TARGET_FILE:terminal_romanian_whist>
+                 -DEXPECTED=${CMAKE_CURRENT_SOURCE_DIR}/golden/demo-seed-42.txt
+                 -DACTUAL=${CMAKE_CURRENT_BINARY_DIR}/demo-seed-42.txt
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/golden/CompareTranscript.cmake)
+
+    set_tests_properties(demo_transcript PROPERTIES LABELS golden TIMEOUT 60)
+endif()
