@@ -10,30 +10,29 @@
 
 int main(int argc, char** argv)
 {
-    AppOptions options;
-    bool helpRequested = false;
-    bool versionRequested = false;
-    std::string error;
+    const CommandLine commandLine = AppOptions::fromCommandLine(argc, argv);
 
-    if(!AppOptions::fromCommandLine(argc, argv, options, helpRequested, versionRequested, error))
+    switch(commandLine.action)
     {
-        std::cerr << error << std::endl;
-        return 2;
+        case CommandLine::Action::Error:
+            std::cerr << commandLine.error << std::endl;
+            return 2;
+
+        case CommandLine::Action::Help:
+            std::cout << AppOptions::helpText();
+            return 0;
+
+        case CommandLine::Action::Version:
+            std::cout << "terminal_romanian_whist " << whist_terminal::VersionString
+                      << " (romanian_whist engine " << romanian_whist::VersionString << ")"
+                      << std::endl;
+            return 0;
+
+        case CommandLine::Action::Run:
+            break;
     }
 
-    if(helpRequested)
-    {
-        std::cout << AppOptions::helpText();
-        return 0;
-    }
-
-    if(versionRequested)
-    {
-        std::cout << "terminal_romanian_whist " << whist_terminal::VersionString
-                  << " (romanian_whist engine " << romanian_whist::VersionString << ")"
-                  << std::endl;
-        return 0;
-    }
+    AppOptions options = commandLine.options;
 
     try
     {

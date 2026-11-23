@@ -176,17 +176,13 @@ bool parseReckonerPresetFlag(const char* argument,
 
 } // namespace
 
-bool AppOptions::fromCommandLine(int argc,
-                                 char** argv,
-                                 AppOptions& optionsOut,
-                                 bool& helpRequested,
-                                 bool& versionRequested,
-                                 std::string& errorOut)
+CommandLine AppOptions::fromCommandLine(int argc, char** argv)
 {
-    AppOptions options;
+    CommandLine result;
+    AppOptions& options = result.options;
 
-    helpRequested = false;
-    versionRequested = false;
+    bool helpRequested = false;
+    bool versionRequested = false;
 
     const bool stdoutIsTerminal = isTerminal(true);
     const bool stdinIsTerminal = isTerminal(false);
@@ -257,15 +253,17 @@ bool AppOptions::fromCommandLine(int argc,
             std::string parseError;
             if(!parseReckonerPresetFlag(argument, options.reckonerPreset, options.encoding, parseError))
             {
-                errorOut = parseError;
-                return false;
+                result.action = CommandLine::Action::Error;
+                result.error = parseError;
+                return result;
             }
         }
         else
         {
-            errorOut = "Unrecognised option: " + DisplayText::escaped(argument, options.encoding) +
-                       "\nRun with --help to see the available options.";
-            return false;
+            result.action = CommandLine::Action::Error;
+            result.error = "Unrecognised option: " + DisplayText::escaped(argument, options.encoding) +
+                           "\nRun with --help to see the available options.";
+            return result;
         }
     }
 
@@ -279,8 +277,12 @@ bool AppOptions::fromCommandLine(int argc,
     if(!options.screenControl)
         options.altScreen = false;
 
-    optionsOut = options;
-    return true;
+    if(helpRequested)
+        result.action = CommandLine::Action::Help;
+    else if(versionRequested)
+        result.action = CommandLine::Action::Version;
+
+    return result;
 }
 
 std::string AppOptions::helpText()

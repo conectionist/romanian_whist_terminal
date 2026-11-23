@@ -10,6 +10,8 @@
 
 #include "DisplayText.h"
 
+struct CommandLine;
+
 // How the interface is allowed to draw itself, and how fast it plays.
 //
 // Every field starts at what a capable interactive terminal supports and is
@@ -44,16 +46,27 @@ struct AppOptions
     romanian_whist::reckoner::ReckonerPreset reckonerPreset =
         romanian_whist::reckoner::ReckonerPreset::Gamma;
 
-    // Returns false and fills errorOut on a malformed flag. `helpRequested` and
-    // `versionRequested` are handled by the caller, which prints and exits.
-    static bool fromCommandLine(int argc,
-                                char** argv,
-                                AppOptions& optionsOut,
-                                bool& helpRequested,
-                                bool& versionRequested,
-                                std::string& errorOut);
+    static CommandLine fromCommandLine(int argc, char** argv);
 
     static std::string helpText();
+};
+
+// What the command line asks for. A malformed flag is an error even after
+// --help, and --help wins over --version; the caller prints and exits for all
+// three. `options` holds every flag that was read.
+struct CommandLine
+{
+    enum class Action
+    {
+        Run,
+        Help,
+        Version,
+        Error
+    };
+
+    Action action = Action::Run;
+    AppOptions options;
+    std::string error;
 };
 
 #endif

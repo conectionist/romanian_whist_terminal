@@ -26,14 +26,14 @@ void ConsoleMoveProvider::redraw(const std::string& prompt, const std::string& e
     ui.renderer.drawFrame(ui.view, prompt);
 }
 
-std::vector<std::size_t> ConsoleMoveProvider::layOutHand(const std::vector<Card>& hand,
-                                                        const std::vector<Card>& legalCards,
-                                                        const std::optional<Card>& trump) const
+std::vector<std::size_t> ConsoleMoveProvider::showHand(const std::vector<Card>& hand,
+                                                      const std::vector<Card>& legalCards,
+                                                      const std::optional<Card>& trump) const
 {
     // The layout itself is a pure function of the hand - see HandLayout.h for
     // the three orderings it reconciles. All this adds is putting the result on
     // screen, which keeps every write to the view in one place.
-    HandLayout layout = ::layOutHand(hand, legalCards, trump);
+    HandLayout layout = layOutHand(hand, legalCards, trump);
 
     ui.view.hand = std::move(layout.entries);
     ui.view.legalCount = static_cast<unsigned int>(layout.choices.size());
@@ -53,7 +53,7 @@ unsigned int ConsoleMoveProvider::makeBet(const BetContext& context)
                        context.roundType == RoundType::Hidden;
 
     if(!blind)
-        layOutHand(context.hand, {}, context.trump);
+        showHand(context.hand, {}, context.trump);
     else
     {
         ui.view.hand.clear();
@@ -108,7 +108,7 @@ std::optional<std::size_t> ConsoleMoveProvider::playCard(const PlayContext& cont
     if(legalCards.empty())
         return std::nullopt;
 
-    const std::vector<std::size_t> choices = layOutHand(hand, legalCards, trump);
+    const std::vector<std::size_t> choices = showHand(hand, legalCards, trump);
 
     ui.view.hint = playHint(hand, choices.size(), trump, leadSuit, ui.cardFormat);
 
