@@ -78,6 +78,12 @@ add_library(terminal_core STATIC
 
 target_compile_features(terminal_core PUBLIC cxx_std_20)
 
+# MSVC deprecates std::getenv in favour of its own _dupenv_s. The standard
+# function works on every platform this builds for, and the code only reads
+# from it. PUBLIC, because the tests call it too.
+target_compile_definitions(terminal_core PUBLIC
+    $<$<CXX_COMPILER_ID:MSVC>:_CRT_SECURE_NO_WARNINGS>)
+
 add_executable(terminal_romanian_whist
     src/main.cpp
 )
