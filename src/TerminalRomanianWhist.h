@@ -17,9 +17,9 @@
 
 #include <chrono>
 
-// The engine owns the loop now, so this is no longer a driver - it is what the
-// engine reports to. Every method below the constructor is a callback, and the
-// order they fire in is IGameObserver's contract, not this class's.
+// What the engine reports to while it plays the game. The methods under the
+// IGameObserver heading are its callbacks, and the order they fire in is
+// IGameObserver's contract, not this class's.
 class TerminalRomanianWhist : public romanian_whist::IGameObserver
 {
 private:

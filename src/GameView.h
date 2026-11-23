@@ -122,13 +122,12 @@ struct GameView
 };
 
 // Refills everything readable straight from the engine: seats, scores, bets,
-// streaks, hand sizes, round and trick counts, trump and round type - and the
-// trick on the table, which the engine now holds rather than the client
-// accumulating it card by card.
+// streaks, hand sizes, round and trick counts, trump and round type, and the
+// cards on the table.
 //
-// A pure function of the engine. What is left to the caller is only what the
-// engine does not model: which seat is active, the human's numbered hand
-// layout, any message or hint, and elapsed wall-clock time.
+// Reads the engine, and view.humanSeat to decide which hands to fill in. The
+// caller sets the rest: the phase, the trick number, the active seat, the
+// human's numbered hand, any message or hint, and elapsed wall-clock time.
 void refreshFromEngine(GameView& view, const romanian_whist::GameEngine& game);
 
 #endif
