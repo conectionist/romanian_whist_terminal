@@ -110,7 +110,7 @@ TEST_CASE("the bidding frame counts the bids and marks who is bidding", "[frame]
     view.seats[0].bet = 2;
     view.betsPlaced = 1;
     view.betSum = 2;
-    view.activeSeat = 1;
+    view.activeSeat = romanian_whist::Seat{1};
 
     const std::string frame = draw(view, FullHeight);
 
@@ -129,9 +129,9 @@ TEST_CASE("the playing frame shows the trick and numbers only the legal cards", 
     view.leadSuit = Suit::Hearts;
     view.table = { { 1, Card(Rank::King, Suit::Hearts), true },
                    { 2, Card(Rank::Three, Suit::Hearts), false } };
-    view.activeSeat = 3;
+    view.activeSeat = romanian_whist::Seat{3};
 
-    view.humanSeat = 0;
+    view.humanSeat = romanian_whist::Seat{0};
     view.seats[0].isHuman = true;
     view.hand = { { Card(Rank::Ace, Suit::Hearts), true, 1 },
                   { Card(Rank::Five, Suit::Hearts), true, 2 },

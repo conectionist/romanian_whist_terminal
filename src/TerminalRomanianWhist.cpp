@@ -32,58 +32,90 @@ bool isReckoner(AiLevel level)
         case AiLevel::ReckonerDelta:
         case AiLevel::Reckoner:
             return true;
-        default:
+
+        case AiLevel::Random:
+        case AiLevel::FirstCard:
+        case AiLevel::LowRisk:
+        case AiLevel::Ducking:
+        case AiLevel::Cyborg:
             return false;
     }
+
+    // No default above, so -Wswitch names a level the switch leaves out. Only
+    // a value outside the enum gets here.
+    throw std::logic_error("isReckoner: unknown AI level");
 }
 
+reckoner::ReckonerKnobs knobsFor(reckoner::ReckonerPreset preset)
+{
+    switch(preset)
+    {
+        case reckoner::ReckonerPreset::Alpha: return reckoner::ReckonerKnobs::alpha();
+        case reckoner::ReckonerPreset::Beta:  return reckoner::ReckonerKnobs::beta();
+        case reckoner::ReckonerPreset::Gamma: return reckoner::ReckonerKnobs::gamma();
+        case reckoner::ReckonerPreset::Delta: return reckoner::ReckonerKnobs::delta();
+    }
+
+    // No default above, so -Wswitch names a preset the switch leaves out. Only
+    // a value outside the enum gets here.
+    throw std::logic_error("knobsFor: unknown Reckoner preset");
+}
+
+// Plain "Reckoner" plays the preset chosen with --reckoner-preset.
 reckoner::ReckonerKnobs getReckonerKnobs(AiLevel level, reckoner::ReckonerPreset defaultPreset)
 {
     switch(level)
     {
-        case AiLevel::ReckonerAlpha: return reckoner::ReckonerKnobs::alpha();
-        case AiLevel::ReckonerBeta:  return reckoner::ReckonerKnobs::beta();
-        case AiLevel::ReckonerGamma: return reckoner::ReckonerKnobs::gamma();
-        case AiLevel::ReckonerDelta: return reckoner::ReckonerKnobs::delta();
-        case AiLevel::Reckoner:
-        default:
-            switch(defaultPreset)
-            {
-                case reckoner::ReckonerPreset::Alpha: return reckoner::ReckonerKnobs::alpha();
-                case reckoner::ReckonerPreset::Beta:  return reckoner::ReckonerKnobs::beta();
-                case reckoner::ReckonerPreset::Delta: return reckoner::ReckonerKnobs::delta();
-                case reckoner::ReckonerPreset::Gamma:
-                default:                              return reckoner::ReckonerKnobs::gamma();
-            }
+        case AiLevel::ReckonerAlpha: return knobsFor(reckoner::ReckonerPreset::Alpha);
+        case AiLevel::ReckonerBeta:  return knobsFor(reckoner::ReckonerPreset::Beta);
+        case AiLevel::ReckonerGamma: return knobsFor(reckoner::ReckonerPreset::Gamma);
+        case AiLevel::ReckonerDelta: return knobsFor(reckoner::ReckonerPreset::Delta);
+        case AiLevel::Reckoner:      return knobsFor(defaultPreset);
+
+        case AiLevel::Random:
+        case AiLevel::FirstCard:
+        case AiLevel::LowRisk:
+        case AiLevel::Ducking:
+        case AiLevel::Cyborg:
+            break;
     }
+
+    // Only Reckoner levels have knobs, and buildSetup() asks for no others.
+    throw std::logic_error("getReckonerKnobs: not a Reckoner level");
 }
 
 // `seed` is unset unless --seed was given. Only RandomCardStrategy reads it -
-// the other three are deterministic already - but it is offset per seat so that
+// the other three are deterministic already - but it is offset per bot so that
 // two random bots in the same game do not draw the identical stream.
 std::unique_ptr<IStrategy> makeStrategy(AiLevel level,
                                         const std::optional<std::uint32_t>& seed,
-                                        std::size_t seatIndex)
+                                        std::size_t aiIndex)
 {
     switch(level)
     {
         case AiLevel::FirstCard: return std::make_unique<FirstCardStrategy>();
         case AiLevel::LowRisk:   return std::make_unique<LowRiskStrategy>();
         case AiLevel::Ducking:   return std::make_unique<DuckingStrategy>();
-        case AiLevel::Random:    break;
+
+        case AiLevel::Random:
+            if(seed)
+                return std::make_unique<RandomCardStrategy>(*seed + static_cast<std::uint32_t>(aiIndex));
+
+            return std::make_unique<RandomCardStrategy>();
 
         // The Reckoner and the Cyborg are observers as well as strategies, so
-        // buildSetup() builds them through their own seat factories. A level
-        // that gets here has no branch there, and seating a random bot under
-        // its name would hide that.
-        default:
-            throw std::logic_error("makeStrategy: this AI level needs its own seat factory in buildSetup()");
+        // buildSetup() builds them through their own seat factories. Seating a
+        // random bot under their name would hide a missing branch there.
+        case AiLevel::Cyborg:
+        case AiLevel::ReckonerAlpha:
+        case AiLevel::ReckonerBeta:
+        case AiLevel::ReckonerGamma:
+        case AiLevel::ReckonerDelta:
+        case AiLevel::Reckoner:
+            break;
     }
 
-    if(seed)
-        return std::make_unique<RandomCardStrategy>(*seed + static_cast<std::uint32_t>(seatIndex));
-
-    return std::make_unique<RandomCardStrategy>();
+    throw std::logic_error("makeStrategy: this AI level needs its own seat factory in buildSetup()");
 }
 
 } // namespace
@@ -105,7 +137,7 @@ GameSetup TerminalRomanianWhist::buildSetup(const GameConfig& config)
         // Seated first, so seat 0 is the human whenever there is one.
         setup.seats.push_back(SeatSetup{ config.humanName,
                                          std::make_unique<ConsoleMoveProvider>(ui) });
-        view.humanSeat = 0;
+        view.humanSeat = Seat{0};
     }
 
     for(std::size_t i = 0 ; i < config.aiNames.size() ; i++)
@@ -147,7 +179,7 @@ void TerminalRomanianWhist::startGame()
     GameSetup setup = buildSetup(options.demo ? SetupWizard::demoConfig() : wizard.run());
 
     game.addObserver(this);
-    pacer.setHumanIsPlaying(view.humanSeat >= 0);
+    pacer.setHumanIsPlaying(view.humanSeat.has_value());
     startTime = std::chrono::steady_clock::now();
 
     // Seats the table, lays out the schedule, builds the deck and starts the
@@ -167,7 +199,7 @@ void TerminalRomanianWhist::startGame()
 
 bool TerminalRomanianWhist::isHumanSeat(Seat seat) const
 {
-    return view.humanSeat >= 0 && static_cast<unsigned int>(view.humanSeat) == seat.index;
+    return view.humanSeat == seat;
 }
 
 void TerminalRomanianWhist::refresh(const GameEngine& engine)
@@ -184,14 +216,14 @@ void TerminalRomanianWhist::onRoundStarted(const GameEngine& engine)
     view.phase = Phase::Betting;
     view.message.clear();
     view.table.clear();
-    view.activeSeat = -1;
+    view.activeSeat.reset();
 
     refresh(engine);
 }
 
 void TerminalRomanianWhist::onBetRequested(const GameEngine& engine, Seat seat)
 {
-    view.activeSeat = static_cast<int>(seat.index);
+    view.activeSeat = seat;
     refresh(engine);
 
     // The human's own frame is drawn by their move provider, complete with the
@@ -217,7 +249,7 @@ void TerminalRomanianWhist::onBettingComplete(const GameEngine& engine)
     // Hold on the completed bid table before the first card goes down. Without
     // this the last bid is only ever seen when an AI made it, and the human
     // never gets to read what the table has committed to.
-    view.activeSeat = -1;
+    view.activeSeat.reset();
     refresh(engine);
     renderer.drawFrame(view);
     pacer.beat();
@@ -233,14 +265,14 @@ void TerminalRomanianWhist::onTrickStarted(const GameEngine& engine, unsigned in
     view.phase = Phase::Playing;
     view.trickNumber = trickNumber;
     view.message.clear();
-    view.activeSeat = -1;
+    view.activeSeat.reset();
 
     refresh(engine);
 }
 
 void TerminalRomanianWhist::onCardRequested(const GameEngine& engine, Seat seat)
 {
-    view.activeSeat = static_cast<int>(seat.index);
+    view.activeSeat = seat;
 
     refresh(engine);
 
@@ -268,7 +300,7 @@ void TerminalRomanianWhist::onCardPlayed(const GameEngine& engine, Seat seat, co
 void TerminalRomanianWhist::onTrickWon(const GameEngine& engine, Seat winner, unsigned int trickNumber)
 {
     view.phase = Phase::TrickEnd;
-    view.activeSeat = -1;
+    view.activeSeat.reset();
     view.message = engine.getPlayers().at(winner.index).getName() + " wins the trick.";
 
     // The finished trick is still the engine's current one throughout this
@@ -290,7 +322,7 @@ void TerminalRomanianWhist::onRoundScored(const GameEngine& engine)
     // committed, which is what lets the board show what the round was worth
     // alongside the total it folds into.
     view.phase = Phase::RoundEnd;
-    view.activeSeat = -1;
+    view.activeSeat.reset();
     view.message.clear();
 
     refresh(engine);
