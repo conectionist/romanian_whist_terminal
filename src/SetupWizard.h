@@ -53,9 +53,7 @@ struct GameConfig
 
 // Asks what kind of game to play.
 //
-// Every answer is bounded, so the setup is one the engine accepts. It refuses a
-// player count outside 2 to 6, or two seats with one name, by throwing, which
-// would end the program before the game starts.
+// Every answer is bounded, so the engine accepts the setup it returns.
 class SetupWizard
 {
 private:
@@ -66,8 +64,8 @@ private:
     // table's name column.
     static constexpr unsigned int MaximumNameLength = 10;
 
-    // The engine deals from a deck sized by player count and cannot go above
-    // this without indexing off the end of the ranks.
+    // The engine refuses more than six players by throwing, which would end the
+    // program before the game starts.
     static constexpr int MaximumPlayers = 6;
 
     int ask(const std::string& title, const std::vector<std::string>& options) const;

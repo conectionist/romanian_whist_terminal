@@ -127,7 +127,8 @@ std::string Input::readName(unsigned int maxLength,
         }
 
         // The engine refuses two seats with one name by throwing, which would end
-        // the program before the game starts, so the name is asked for again.
+        // the program before the game starts. Names that differ only in case are
+        // refused too, because they would be hard to tell apart on screen.
         const bool duplicate = std::any_of(taken.begin(), taken.end(),
             [&name](const std::string& other) { return Input::equalIgnoringCase(other, name); });
 

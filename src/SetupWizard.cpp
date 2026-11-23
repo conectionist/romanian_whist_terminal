@@ -83,8 +83,9 @@ GameConfig SetupWizard::run() const
                                                         AiLevel::Cyborg,
                                                         AiLevel::LowRisk };
 
-        // Skip any stock name the player has just taken for themselves: sharing
-        // a name with a bot would mean sharing its bets and its score.
+        // Skip any stock name the player has just taken for themselves: the
+        // engine refuses two seats with one name, and two names that differ only
+        // in case would be hard to tell apart on screen.
         for(const std::string& name : BotNames)
         {
             if(config.aiNames.size() == 3)
