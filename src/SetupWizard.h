@@ -53,10 +53,9 @@ struct GameConfig
 
 // Asks what kind of game to play.
 //
-// Every answer is bounded. That is not only tidiness: the engine builds its deck
-// from the player count with no range check of its own, so an out-of-range count
-// reaching it is undefined behaviour, and it stores bets against player names,
-// so two players sharing one silently share a score.
+// Every answer is bounded, so the setup is one the engine accepts. It refuses a
+// player count outside 2 to 6, or two seats with one name, by throwing, which
+// would end the program before the game starts.
 class SetupWizard
 {
 private:
