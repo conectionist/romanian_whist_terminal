@@ -34,7 +34,7 @@ jobs:
           submodules: recursive
 
       - name: Configure
-        run: cmake --preset release
+        run: cmake --preset release -DWHIST_TERMINAL_WARNINGS_AS_ERRORS=ON
 
       - name: Get project version
         id: version
@@ -70,7 +70,7 @@ jobs:
           submodules: recursive
 
       - name: Configure
-        run: cmake --preset release
+        run: cmake --preset release -DWHIST_TERMINAL_WARNINGS_AS_ERRORS=ON
 
       - name: Get project version
         id: version
@@ -107,7 +107,7 @@ jobs:
           submodules: recursive
 
       - name: Configure
-        run: cmake --preset release
+        run: cmake --preset release -DWHIST_TERMINAL_WARNINGS_AS_ERRORS=ON
 
       - name: Get project version
         id: version

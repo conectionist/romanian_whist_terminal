@@ -16,6 +16,32 @@ endif()
 # dependencies.
 option(WHIST_TERMINAL_BUILD_TESTS "Build the terminal client's test suite" ${PROJECT_IS_TOP_LEVEL})
 
+# On only when top-level, so a project that adds this one under its own
+# -Werror is not broken by our extra warnings. Warnings as errors stays off by
+# default because compilers add new warnings; CI turns it on.
+option(WHIST_TERMINAL_ENABLE_WARNINGS "Build the client and its tests with the project's warning set"
+       ${PROJECT_IS_TOP_LEVEL})
+option(WHIST_TERMINAL_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
+
+# The same set as the engine. -Wall includes -Wswitch, which names an enum value
+# a switch forgets. The semicolons in the generator expressions keep each flag
+# a separate argument.
+function(whist_terminal_enable_warnings target)
+    if(NOT WHIST_TERMINAL_ENABLE_WARNINGS)
+        return()
+    endif()
+
+    target_compile_options(${target} PRIVATE
+        $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-Wall;-Wextra;-Wshadow;-Wpedantic;-Wnon-virtual-dtor;-Woverloaded-virtual>
+        $<$<CXX_COMPILER_ID:MSVC>:/W4>)
+
+    if(WHIST_TERMINAL_WARNINGS_AS_ERRORS)
+        target_compile_options(${target} PRIVATE
+            $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-Werror>
+            $<$<CXX_COMPILER_ID:MSVC>:/WX>)
+    endif()
+endfunction()
+
 # Declared before the engine is added, because the first declaration of a name
 # wins and the engine's own tests declare Catch2 by tag. Their switch is read
 # before the engine defines it, as it can only be on if it was set from outside.
@@ -80,6 +106,9 @@ target_include_directories(terminal_core PUBLIC
 target_link_libraries(terminal_core PUBLIC RomanianWhist::engine)
 
 target_link_libraries(terminal_romanian_whist PRIVATE terminal_core)
+
+whist_terminal_enable_warnings(terminal_core)
+whist_terminal_enable_warnings(terminal_romanian_whist)
 
 # Unversioned copy for local tooling (VSCode launch/tasks) that shouldn't need
 # updating on every version bump. Released/CI binaries use the versioned name.

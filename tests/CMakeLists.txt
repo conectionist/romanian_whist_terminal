@@ -21,6 +21,8 @@ target_include_directories(terminal_tests PRIVATE
 
 target_compile_features(terminal_tests PRIVATE cxx_std_20)
 
+whist_terminal_enable_warnings(terminal_tests)
+
 # Cards are compared by value here as they are in the engine's suite, and half
 # of those comparisons are on an optional. Catch2 renders those "{?}" whatever
 # StringMaker specializations are in scope unless this is defined - and it has
