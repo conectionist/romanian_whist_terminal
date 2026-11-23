@@ -7,6 +7,7 @@
 
 #include <romanian_whist/GameEngine.h>
 
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -21,11 +22,19 @@ class Renderer
 private:
     const Terminal& terminal;
     const CardFormat& cardFormat;
+    std::optional<unsigned int> fixedHeight;
 
 public:
-    Renderer(const Terminal& _terminal, const CardFormat& _cardFormat);
+    // `fixedHeight` replaces the terminal's height, so a test can draw either
+    // layout whatever terminal it runs in.
+    Renderer(const Terminal& _terminal,
+             const CardFormat& _cardFormat,
+             std::optional<unsigned int> _fixedHeight = std::nullopt);
 
     void drawFrame(const GameView& view, std::string_view prompt = {}) const;
+
+    // What drawFrame() writes, returned instead of written.
+    std::string frame(const GameView& view, std::string_view prompt = {}) const;
 
     // A framed question with numbered options, for the setup wizard.
     void drawQuestion(std::string_view title,

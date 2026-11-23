@@ -45,14 +45,17 @@ std::string signedScore(int score)
 
 } // namespace
 
-Renderer::Renderer(const Terminal& _terminal, const CardFormat& _cardFormat)
+Renderer::Renderer(const Terminal& _terminal,
+                   const CardFormat& _cardFormat,
+                   std::optional<unsigned int> _fixedHeight)
     : terminal(_terminal),
-      cardFormat(_cardFormat)
+      cardFormat(_cardFormat),
+      fixedHeight(_fixedHeight)
 {}
 
 bool Renderer::compact() const
 {
-    return terminal.height() < MinimumFullHeight;
+    return fixedHeight.value_or(terminal.height()) < MinimumFullHeight;
 }
 
 std::string Renderer::pad(std::string_view text, unsigned int width, bool rightAlign)
@@ -468,45 +471,51 @@ void Renderer::appendFooter(std::string& out, const GameView& view, std::string_
 
 void Renderer::drawFrame(const GameView& view, std::string_view prompt) const
 {
-    std::string frame;
-    frame.reserve(4096);
+    terminal.write(frame(view, prompt));
+}
 
-    terminal.beginFrame(frame);
+std::string Renderer::frame(const GameView& view, std::string_view prompt) const
+{
+    std::string out;
+    out.reserve(4096);
 
-    appendHeader(frame, view);
-    appendBlank(frame);
+    terminal.beginFrame(out);
+
+    appendHeader(out, view);
+    appendBlank(out);
 
     if(view.phase == Phase::RoundEnd)
-        appendRule(frame, "ROUND RESULT");
+        appendRule(out, "ROUND RESULT");
     else if(view.phase == Phase::Betting)
-        appendRule(frame, "BIDDING",
+        appendRule(out, "BIDDING",
                    "bids placed " + std::to_string(view.betsPlaced) +
                    " of " + std::to_string(view.seats.size()));
     else
-        appendRule(frame, "SCORE",
+        appendRule(out, "SCORE",
                    "Sum of bids: " + std::to_string(view.betSum));
 
-    appendBlank(frame);
-    appendSeatTable(frame, view);
+    appendBlank(out);
+    appendSeatTable(out, view);
 
     if(view.phase == Phase::Playing || view.phase == Phase::TrickEnd)
     {
-        appendBlank(frame);
-        appendTrick(frame, view);
+        appendBlank(out);
+        appendTrick(out, view);
     }
 
     if(!view.hand.empty())
     {
-        appendBlank(frame);
-        appendHand(frame, view);
+        appendBlank(out);
+        appendHand(out, view);
     }
 
-    appendOtherHands(frame, view);
+    appendOtherHands(out, view);
 
-    appendFooter(frame, view, prompt);
+    appendFooter(out, view, prompt);
 
-    terminal.endFrame(frame);
-    terminal.write(frame);
+    terminal.endFrame(out);
+
+    return out;
 }
 
 void Renderer::drawQuestion(std::string_view title,
