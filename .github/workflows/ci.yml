@@ -27,8 +27,8 @@ permissions:
 jobs:
   build-linux:
     name: Build (Linux)
-    # Pinned rather than ubuntu-latest: the demo transcript test depends on this
-    # image's maths library, and a newer one can change the game a seed plays.
+    # Pinned to one Ubuntu release: the demo transcript was recorded with its
+    # maths library, and the next release's can change the game a seed plays.
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
@@ -36,7 +36,7 @@ jobs:
           submodules: recursive
 
       - name: Configure
-        run: cmake --preset release -DWHIST_TERMINAL_WARNINGS_AS_ERRORS=ON
+        run: cmake --preset release -DWHIST_TERMINAL_WARNINGS_AS_ERRORS=ON -DWHIST_TERMINAL_GOLDEN_TEST=ON
 
       - name: Get project version
         id: version
