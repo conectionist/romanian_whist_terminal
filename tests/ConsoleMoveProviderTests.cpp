@@ -2,10 +2,8 @@
 
 #include "CardStringMaker.h"
 
-#include "AppOptions.h"
-#include "CardFormat.h"
 #include "ConsoleMoveProvider.h"
-#include "Terminal.h"
+#include "PlainTerminal.h"
 
 #include <romanian_whist/CardValidator.h>
 
@@ -20,34 +18,13 @@ using romanian_whist::Suit;
 
 namespace
 {
-// Plain text, so suits are written as letters.
-struct PlainFormat
-{
-    AppOptions options;
-    Terminal terminal;
-    CardFormat cardFormat;
-
-    PlainFormat() : options(plainOptions()), terminal(options), cardFormat(terminal) {}
-
-    static AppOptions plainOptions()
-    {
-        AppOptions plain;
-        plain.color = false;
-        plain.unicode = false;
-        plain.screenControl = false;
-        plain.altScreen = false;
-        plain.interactive = false;
-        return plain;
-    }
-};
-
 // The legal cards come from the engine's own rules, so these tests check the
 // wording against what the player is really allowed to play.
 std::string hintFor(const std::vector<Card>& hand,
                     const std::optional<Card>& trump,
                     const std::optional<Suit>& leadSuit)
 {
-    const PlainFormat plain;
+    const PlainTerminal plain;
     const std::size_t legalCount = CardValidator{}.getLegalCards(hand, trump, leadSuit).size();
 
     return ConsoleMoveProvider::playHint(hand, legalCount, trump, leadSuit, plain.cardFormat);
@@ -86,7 +63,7 @@ TEST_CASE("no hint when neither rule explains the barred cards", "[move-provider
 {
     // The engine's rules cannot bar a card here, but a rule it adds later could,
     // and naming a rule that does not apply would mislead.
-    const PlainFormat plain;
+    const PlainTerminal plain;
     const std::vector<Card> hand{ Card(Rank::King, Suit::Clubs), Card(Rank::Ten, Suit::Diamonds) };
 
     SECTION("in a round without trumps")

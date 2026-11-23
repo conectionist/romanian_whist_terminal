@@ -45,14 +45,17 @@ std::string signedScore(int score)
 
 } // namespace
 
-Renderer::Renderer(const Terminal& _terminal, const CardFormat& _cardFormat)
+Renderer::Renderer(const Terminal& _terminal,
+                   const CardFormat& _cardFormat,
+                   std::optional<unsigned int> _fixedHeight)
     : terminal(_terminal),
-      cardFormat(_cardFormat)
+      cardFormat(_cardFormat),
+      fixedHeight(_fixedHeight)
 {}
 
 bool Renderer::compact() const
 {
-    return terminal.height() < MinimumFullHeight;
+    return (fixedHeight ? *fixedHeight : terminal.height()) < MinimumFullHeight;
 }
 
 std::string Renderer::pad(std::string_view text, unsigned int width, bool rightAlign)
@@ -468,45 +471,51 @@ void Renderer::appendFooter(std::string& out, const GameView& view, std::string_
 
 void Renderer::drawFrame(const GameView& view, std::string_view prompt) const
 {
-    std::string frame;
-    frame.reserve(4096);
+    terminal.write(frame(view, prompt));
+}
 
-    terminal.beginFrame(frame);
+std::string Renderer::frame(const GameView& view, std::string_view prompt) const
+{
+    std::string out;
+    out.reserve(4096);
 
-    appendHeader(frame, view);
-    appendBlank(frame);
+    terminal.beginFrame(out);
+
+    appendHeader(out, view);
+    appendBlank(out);
 
     if(view.phase == Phase::RoundEnd)
-        appendRule(frame, "ROUND RESULT");
+        appendRule(out, "ROUND RESULT");
     else if(view.phase == Phase::Betting)
-        appendRule(frame, "BIDDING",
+        appendRule(out, "BIDDING",
                    "bids placed " + std::to_string(view.betsPlaced) +
                    " of " + std::to_string(view.seats.size()));
     else
-        appendRule(frame, "SCORE",
+        appendRule(out, "SCORE",
                    "Sum of bids: " + std::to_string(view.betSum));
 
-    appendBlank(frame);
-    appendSeatTable(frame, view);
+    appendBlank(out);
+    appendSeatTable(out, view);
 
     if(view.phase == Phase::Playing || view.phase == Phase::TrickEnd)
     {
-        appendBlank(frame);
-        appendTrick(frame, view);
+        appendBlank(out);
+        appendTrick(out, view);
     }
 
     if(!view.hand.empty())
     {
-        appendBlank(frame);
-        appendHand(frame, view);
+        appendBlank(out);
+        appendHand(out, view);
     }
 
-    appendOtherHands(frame, view);
+    appendOtherHands(out, view);
 
-    appendFooter(frame, view, prompt);
+    appendFooter(out, view, prompt);
 
-    terminal.endFrame(frame);
-    terminal.write(frame);
+    terminal.endFrame(out);
+
+    return out;
 }
 
 void Renderer::drawQuestion(std::string_view title,
@@ -514,37 +523,37 @@ void Renderer::drawQuestion(std::string_view title,
                             std::string_view prompt,
                             std::string_view error) const
 {
-    std::string frame;
-    frame.reserve(1024);
+    std::string out;
+    out.reserve(1024);
 
-    terminal.beginFrame(frame);
+    terminal.beginFrame(out);
 
-    frame += terminal.paint("  ROMANIAN WHIST", Terminal::Color::Yellow, true);
-    terminal.endLine(frame);
-    appendBlank(frame);
+    out += terminal.paint("  ROMANIAN WHIST", Terminal::Color::Yellow, true);
+    terminal.endLine(out);
+    appendBlank(out);
 
-    appendRule(frame, title);
-    appendBlank(frame);
+    appendRule(out, title);
+    appendBlank(out);
 
     for(std::size_t i = 0 ; i < options.size() ; i++)
     {
-        frame += "    " + terminal.paint(std::to_string(i + 1), Terminal::Color::Cyan, true) +
+        out += "    " + terminal.paint(std::to_string(i + 1), Terminal::Color::Cyan, true) +
                  ") " + options[i];
-        terminal.endLine(frame);
+        terminal.endLine(out);
     }
 
     if(!error.empty())
     {
-        appendBlank(frame);
-        frame += "  " + terminal.paint(error, Terminal::Color::Red, true);
-        terminal.endLine(frame);
+        appendBlank(out);
+        out += "  " + terminal.paint(error, Terminal::Color::Red, true);
+        terminal.endLine(out);
     }
 
-    appendBlank(frame);
-    frame += "  " + std::string(prompt);
+    appendBlank(out);
+    out += "  " + std::string(prompt);
 
-    terminal.endFrame(frame);
-    terminal.write(frame);
+    terminal.endFrame(out);
+    terminal.write(out);
 }
 
 std::string Renderer::winnerAnnouncement(const std::vector<romanian_whist::Standing>& winners)
@@ -575,15 +584,15 @@ std::string Renderer::winnerAnnouncement(const std::vector<romanian_whist::Stand
 void Renderer::drawGameOver(const std::vector<romanian_whist::Standing>& standings,
                             const std::vector<romanian_whist::Standing>& winners) const
 {
-    std::string frame;
+    std::string out;
 
-    frame += "\n";
-    frame += boxCorner(true, true) + horizontalLine(RuleWidth) + boxCorner(true, false) + "\n";
+    out += "\n";
+    out += boxCorner(true, true) + horizontalLine(RuleWidth) + boxCorner(true, false) + "\n";
 
     const std::string vertical = terminal.unicodeEnabled() ? "│" : "|";
-    frame += vertical + pad(" " + terminal.paint("FINAL RESULTS", Terminal::Color::Yellow, true),
+    out += vertical + pad(" " + terminal.paint("FINAL RESULTS", Terminal::Color::Yellow, true),
                             RuleWidth) + vertical + "\n";
-    frame += boxCorner(false, true) + horizontalLine(RuleWidth) + boxCorner(false, false) + "\n\n";
+    out += boxCorner(false, true) + horizontalLine(RuleWidth) + boxCorner(false, false) + "\n\n";
 
     for(const romanian_whist::Standing& standing : standings)
     {
@@ -597,18 +606,18 @@ void Renderer::drawGameOver(const std::vector<romanian_whist::Standing>& standin
 
         // Every winner is highlighted, not just the top row - on a draw the
         // highlight has to name as many seats as the announcement below does.
-        frame += (standing.place == 1 ? terminal.paint(row, Terminal::Color::Yellow, true) : row);
-        frame += "\n";
+        out += (standing.place == 1 ? terminal.paint(row, Terminal::Color::Yellow, true) : row);
+        out += "\n";
     }
 
     const std::string announcement = winnerAnnouncement(winners);
 
     if(!announcement.empty())
     {
-        frame += "\n    " + terminal.paint(announcement, Terminal::Color::Green, true);
-        frame += "\n";
+        out += "\n    " + terminal.paint(announcement, Terminal::Color::Green, true);
+        out += "\n";
     }
 
-    frame += "\n";
-    terminal.write(frame);
+    out += "\n";
+    terminal.write(out);
 }

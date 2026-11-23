@@ -8,6 +8,8 @@ add_executable(terminal_tests
     InputTests.cpp
     RendererTests.cpp
     ConsoleMoveProviderTests.cpp
+    FrameTests.cpp
+    GameViewTests.cpp
 )
 
 target_link_libraries(terminal_tests PRIVATE
