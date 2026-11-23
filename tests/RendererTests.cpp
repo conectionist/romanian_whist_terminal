@@ -16,10 +16,8 @@ using romanian_whist::Standing;
 // that announces it is the one place a draw either reads correctly or silently
 // becomes a single winner.
 //
-// This was the bug: the screen read standings.front() and said "Ana wins",
-// whoever else was on the same score. The engine answers that question now
-// (GameEngine::getWinners()), which leaves this function with the wording
-// alone - and wording is exactly what a test can pin.
+// The engine decides who won (GameEngine::getWinners()), so all this function
+// adds is the wording, and wording is exactly what a test can pin.
 
 namespace
 {

@@ -50,7 +50,7 @@ jobs:
 
       # --no-tests=error, because a build that lands with tests disabled would
       # otherwise print "No tests were found!!!" and exit 0 - green having run
-      # nothing. The engine's CI learned this the hard way in Phase 0.
+      # nothing.
       - name: Test
         run: ctest --preset release --output-on-failure --no-tests=error
 
@@ -86,7 +86,7 @@ jobs:
 
       # --no-tests=error, because a build that lands with tests disabled would
       # otherwise print "No tests were found!!!" and exit 0 - green having run
-      # nothing. The engine's CI learned this the hard way in Phase 0.
+      # nothing.
       - name: Test
         run: ctest --preset release --output-on-failure --no-tests=error
 
@@ -123,7 +123,7 @@ jobs:
 
       # --no-tests=error, because a build that lands with tests disabled would
       # otherwise print "No tests were found!!!" and exit 0 - green having run
-      # nothing. The engine's CI learned this the hard way in Phase 0.
+      # nothing.
       - name: Test
         run: ctest --preset release --output-on-failure --no-tests=error
 
