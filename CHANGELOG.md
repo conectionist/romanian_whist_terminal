@@ -3,6 +3,15 @@
 The version lives in `CMakeLists.txt` and is printed by `--version`, alongside the version of
 the engine this build is linked against.
 
+## 2.5.4
+
+### Fixed
+
+- **The hint says "you must play a trump" when that is the rule**
+  ([#25](https://github.com/conectionist/romanian_whist_terminal/issues/25)). When you held none
+  of the suit led but had a trump, the hint read "you must follow ♥", which is exactly what you
+  could not do.
+
 ## 2.5.3
 
 **The streak bonus and penalty pay every fifth round, not only the first.** The engine moves to

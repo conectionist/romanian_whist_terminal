@@ -43,6 +43,13 @@ public:
     virtual unsigned int makeBet(const romanian_whist::BetContext& context) override;
 
     virtual std::optional<std::size_t> playCard(const romanian_whist::PlayContext& context) override;
+
+    // The line shown under the hand while a card is chosen. Static so a test can
+    // check it: the frame it appears in goes straight to stdout.
+    static std::string playHint(const std::vector<romanian_whist::Card>& hand,
+                                std::size_t legalCount,
+                                const std::optional<romanian_whist::Suit>& leadSuit,
+                                const CardFormat& cardFormat);
 };
 
 #endif

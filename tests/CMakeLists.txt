@@ -7,6 +7,7 @@ add_executable(terminal_tests
     DisplayTextTests.cpp
     InputTests.cpp
     RendererTests.cpp
+    ConsoleMoveProviderTests.cpp
 )
 
 target_link_libraries(terminal_tests PRIVATE
