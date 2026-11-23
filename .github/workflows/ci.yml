@@ -27,7 +27,9 @@ permissions:
 jobs:
   build-linux:
     name: Build (Linux)
-    runs-on: ubuntu-latest
+    # Pinned rather than ubuntu-latest: the demo transcript test depends on this
+    # image's maths library, and a newer one can change the game a seed plays.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
         with:
