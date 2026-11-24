@@ -91,18 +91,24 @@ std::string invalidValueError(const char* flag,
            "'\nExpected " + expected + ".";
 }
 
-// Returns false if text is not a non-negative integer.
+// strtol and strtoull skip leading spaces and accept a sign, so without this
+// " +7" would be read as 7 and "-0" as 0.
+bool startsWithDigit(const char* text)
+{
+    return std::isdigit(static_cast<unsigned char>(*text)) != 0;
+}
+
 bool parseDelayValue(const char* text, long& valueOut)
 {
-    if(*text == '\0')
+    if(!startsWithDigit(text))
         return false;
 
-    errno = 0;
-
+    // A value too big for long comes back as LONG_MAX, which the cap below
+    // brings down like any other.
     char* end = nullptr;
     const long parsed = std::strtol(text, &end, 10);
 
-    if(end == text || *end != '\0' || parsed < 0 || errno == ERANGE)
+    if(*end != '\0')
         return false;
 
     // Anything past a few seconds a card is indistinguishable from a hang, and
@@ -112,17 +118,11 @@ bool parseDelayValue(const char* text, long& valueOut)
     return true;
 }
 
-// Returns false if text is not an integer in 0..2^32-1.
-//
-// Deliberately not folded into parseDelayValue: that one clamps a value it
-// cannot use and this one rejects it, because a seed the caller did not ask for
-// would replay the wrong game silently, which is the one thing the flag exists
-// to rule out.
+// A value out of range is refused, not capped: a seed the caller did not ask
+// for would replay the wrong game without a word.
 bool parseSeedValue(const char* text, std::uint32_t& valueOut)
 {
-    // strtoull skips leading spaces and accepts a sign, so " +7" would be read
-    // as 7 and "-0" as 0.
-    if(!std::isdigit(static_cast<unsigned char>(*text)))
+    if(!startsWithDigit(text))
         return false;
 
     errno = 0;
@@ -138,6 +138,17 @@ bool parseSeedValue(const char* text, std::uint32_t& valueOut)
 
     valueOut = static_cast<std::uint32_t>(parsed);
     return true;
+}
+
+const char* usageForBareFlag(const char* argument)
+{
+    if(std::strcmp(argument, "--delay") == 0)
+        return "--delay=<ms>";
+    if(std::strcmp(argument, "--seed") == 0)
+        return "--seed=<n>";
+    if(std::strcmp(argument, "--reckoner-preset") == 0)
+        return "--reckoner-preset=<p>";
+    return nullptr;
 }
 
 bool parseReckonerPresetValue(const char* text, romanian_whist::reckoner::ReckonerPreset& valueOut)
@@ -262,6 +273,12 @@ CommandLine AppOptions::fromCommandLine(int argc, char** argv)
                                                  "'alpha', 'beta', 'gamma', or 'delta'", options.encoding);
                 return result;
             }
+        }
+        else if(const char* usage = usageForBareFlag(argument))
+        {
+            result.action = CommandLine::Action::Error;
+            result.error = std::string(argument) + " needs a value: " + usage;
+            return result;
         }
         else
         {

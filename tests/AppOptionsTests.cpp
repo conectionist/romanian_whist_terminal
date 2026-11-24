@@ -86,7 +86,6 @@ TEST_CASE("A malformed --seed is rejected rather than replaying the wrong game",
 
     SECTION("minus zero")
     {
-        // strtoull reads this as 0, a value in range.
         REQUIRE(parse({ "--seed=-0" }).action == Action::Error);
     }
 
@@ -122,7 +121,6 @@ TEST_CASE("A malformed --seed is rejected rather than replaying the wrong game",
 
     SECTION("a sign after a leading space")
     {
-        // strtoull skips the space before it reads the sign.
         REQUIRE(parse({ "--seed= +7" }).action == Action::Error);
         REQUIRE(parse({ "--seed= -0" }).action == Action::Error);
     }
@@ -185,6 +183,22 @@ TEST_CASE("A bad value for a real flag names the flag and what it accepts", "[ap
         requireValueError("--delay=", "--delay", delayRange);
     }
 
+    SECTION("a delay with a leading space")
+    {
+        requireValueError("--delay= 250", "--delay", delayRange);
+    }
+
+    SECTION("a delay with a sign")
+    {
+        requireValueError("--delay=+250", "--delay", delayRange);
+        requireValueError("--delay=-0", "--delay", delayRange);
+    }
+
+    SECTION("a delay with a trailing space")
+    {
+        requireValueError("--delay=250 ", "--delay", delayRange);
+    }
+
     SECTION("the value is quoted back")
     {
         CHECK_THAT(parse({ "--seed=abc" }).error, Catch::Matchers::ContainsSubstring("'abc'"));
@@ -210,6 +224,46 @@ TEST_CASE("The delay flag sets the pace", "[app-options]")
 
         REQUIRE(result.action == Action::Run);
         CHECK(result.options.playDelay == milliseconds(10000));
+    }
+
+    SECTION("a value too big for long is clamped too")
+    {
+        const CommandLine result = parse({ "--delay=99999999999999999999999" });
+
+        REQUIRE(result.action == Action::Run);
+        CHECK(result.options.playDelay == milliseconds(10000));
+    }
+}
+
+TEST_CASE("A flag that takes a value says so when it is given none", "[app-options]")
+{
+    const auto requireNeedsValue = [](const std::vector<std::string>& arguments, const std::string& usage)
+    {
+        const CommandLine result = parse(arguments);
+
+        REQUIRE(result.action == Action::Error);
+        CHECK_THAT(result.error, Catch::Matchers::ContainsSubstring("needs a value: " + usage));
+        CHECK_THAT(result.error, !Catch::Matchers::ContainsSubstring("Unrecognised"));
+    };
+
+    SECTION("the seed")
+    {
+        requireNeedsValue({ "--seed" }, "--seed=<n>");
+    }
+
+    SECTION("the seed, with its value as the next argument")
+    {
+        requireNeedsValue({ "--seed", "42" }, "--seed=<n>");
+    }
+
+    SECTION("the delay")
+    {
+        requireNeedsValue({ "--delay" }, "--delay=<ms>");
+    }
+
+    SECTION("the reckoner preset")
+    {
+        requireNeedsValue({ "--reckoner-preset" }, "--reckoner-preset=<p>");
     }
 }
 

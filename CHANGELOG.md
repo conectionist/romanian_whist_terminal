@@ -12,8 +12,15 @@ the engine this build is linked against.
   report "Unrecognised option", although `--help` lists the flag. It now says
   "Invalid value for --seed: '-1'" and expects a whole number from 0 to 4294967295. `--delay`
   expects a whole number of milliseconds, 0 or more.
-- **A seed must start with a digit.** A seed with a leading space was accepted, and so was a sign
-  after it: `--seed=' +7'` replayed seed 7. Both are now refused, as `--seed=-0` is.
+- **A flag given without its value says so.** `--seed 42` reported "Unrecognised option: --seed".
+  It now says "--seed needs a value: --seed=<n>", and `--delay` and `--reckoner-preset` do the
+  same.
+- **A seed or a delay must start with a digit.** A seed with a leading space was accepted, and so
+  was a sign after it: `--seed=' +7'` replayed seed 7. Both are now refused, as `--seed=-0` is.
+  `--delay` refuses them too, and `WHIST_DELAY_MS` ignores them, as it ignores any value it
+  cannot read.
+- **A delay too big to store is capped at 10 seconds** like any other delay past 10 seconds,
+  rather than refused.
 
 ## 2.5.4
 
