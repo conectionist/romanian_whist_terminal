@@ -171,8 +171,7 @@ void Renderer::appendHeader(std::string& out, const GameView& view) const
     const unsigned int inner = RuleWidth;
     const unsigned int boxWidth = inner + 2;
 
-    out += padCenter(terminal.paint("ROMANIAN WHIST", Terminal::Color::Yellow, true), boxWidth);
-    terminal.endLine(out);
+    appendTrimmed(out, padCenter(terminal.paint("ROMANIAN WHIST", Terminal::Color::Yellow, true), boxWidth));
 
     out += boxCorner(true, true) + horizontalLine(inner) + boxCorner(true, false);
     terminal.endLine(out);

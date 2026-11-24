@@ -3,6 +3,17 @@
 The version lives in `CMakeLists.txt` and is printed by `--version`, alongside the version of
 the engine this build is linked against.
 
+## 2.5.6
+
+### Fixed
+
+- **Redirected output no longer asks you to press Enter**
+  ([#35](https://github.com/conectionist/romanian_whist_terminal/issues/35)). When the output is
+  not a terminal, the game never waits, but it still printed "Press Enter for the next trick" and
+  the like: 122 times in `--demo --no-animate > log.txt`. These prompts are now left out.
+- **The title line has no trailing spaces.** "ROMANIAN WHIST" was padded on both sides, so every
+  frame's first line ended in 23 spaces.
+
 ## 2.5.5
 
 ### Fixed

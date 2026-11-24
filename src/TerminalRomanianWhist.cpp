@@ -297,6 +297,13 @@ void TerminalRomanianWhist::onCardPlayed(const GameEngine& engine, Seat seat, co
         pacer.beat();
 }
 
+std::string_view TerminalRomanianWhist::pausePrompt(std::string_view prompt) const
+{
+    // The pacer never waits when the terminal is not interactive, so the
+    // prompt would ask the reader of a log to press a key that does nothing.
+    return terminal.interactive() ? prompt : std::string_view();
+}
+
 void TerminalRomanianWhist::onTrickWon(const GameEngine& engine, Seat winner, unsigned int trickNumber)
 {
     view.phase = Phase::TrickEnd;
@@ -309,8 +316,8 @@ void TerminalRomanianWhist::onTrickWon(const GameEngine& engine, Seat winner, un
     refresh(engine);
 
     const bool moreTricks = trickNumber < engine.getCurrentRoundTrickCount();
-    renderer.drawFrame(view, moreTricks ? "Press Enter for the next trick"
-                                        : "Press Enter to see the round result");
+    renderer.drawFrame(view, pausePrompt(moreTricks ? "Press Enter for the next trick"
+                                                    : "Press Enter to see the round result"));
     pacer.trickPause();
 }
 
@@ -326,6 +333,6 @@ void TerminalRomanianWhist::onRoundScored(const GameEngine& engine)
     view.message.clear();
 
     refresh(engine);
-    renderer.drawFrame(view, "Press Enter to deal the next round");
+    renderer.drawFrame(view, pausePrompt("Press Enter to deal the next round"));
     pacer.roundPause();
 }

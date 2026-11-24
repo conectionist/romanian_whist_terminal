@@ -16,6 +16,7 @@
 #include <romanian_whist/Trick.h>
 
 #include <chrono>
+#include <string_view>
 
 // What the engine reports to while it plays the game. The methods under the
 // IGameObserver heading are its callbacks, and the order they fire in is
@@ -76,6 +77,8 @@ private:
     romanian_whist::GameSetup buildSetup(const GameConfig& config);
 
     bool isHumanSeat(romanian_whist::Seat seat) const;
+
+    std::string_view pausePrompt(std::string_view prompt) const;
 
     // refreshFromEngine() plus the one thing about the view it doesn't set:
     // elapsed minutes since startTime. Every callback below calls this instead

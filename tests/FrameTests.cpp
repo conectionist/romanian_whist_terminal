@@ -218,3 +218,20 @@ TEST_CASE("a short window drops the streak column and the spacing", "[frame]")
     REQUIRE_THAT(compact, !ContainsSubstring("Streak"));
     REQUIRE(lines(compact).size() < lines(full).size());
 }
+
+TEST_CASE("no line of a frame ends in a space", "[frame]")
+{
+    // Redirected output is read as a log, where trailing spaces are noise.
+    for(const Phase phase : { Phase::Betting, Phase::Playing, Phase::TrickEnd, Phase::RoundEnd,
+                               Phase::GameOver })
+    {
+        for(const unsigned int height : { FullHeight, CompactHeight })
+        {
+            for(const std::string& line : lines(draw(fourSeats(phase), height, "Press Enter")))
+            {
+                INFO("line: '" << line << "'");
+                CHECK((line.empty() || line.back() != ' '));
+            }
+        }
+    }
+}
