@@ -3,6 +3,18 @@
 The version lives in `CMakeLists.txt` and is printed by `--version`, alongside the version of
 the engine this build is linked against.
 
+## 2.5.7
+
+### Changed
+
+- **A seed replays a different game than it did in 2.5.6**
+  ([#39](https://github.com/conectionist/romanian_whist_terminal/issues/39)). With `--seed=S`,
+  the deck is shuffled from `S` and each bot that draws at random was seeded with `S` plus its
+  place among the bots. So the first bot, when it was a Reckoner or a Random bot, drew the same
+  numbers that dealt the cards. Bots are now seeded from `S + 1` on, so none shares the deal's
+  numbers. Every seeded game plays out differently from before, so a seed you noted down under
+  an earlier version no longer replays that game.
+
 ## 2.5.6
 
 ### Fixed

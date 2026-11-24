@@ -16,6 +16,13 @@
 #include <romanian_whist/Trick.h>
 
 #include <chrono>
+#include <cstddef>
+#include <cstdint>
+#include <optional>
+
+// The seed for the bot at botIndex among the bots, or unset when the game has
+// none. Every bot that draws at random is seeded with it.
+std::optional<std::uint32_t> botSeed(const std::optional<std::uint32_t>& gameSeed, std::size_t botIndex);
 
 // What the engine reports to while it plays the game. The methods under the
 // IGameObserver heading are its callbacks, and the order they fire in is
