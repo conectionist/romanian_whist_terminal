@@ -50,6 +50,11 @@ public:
     // After a round is scored. Waits whenever there is anyone to wait for -
     // this is the moment worth reading, and the one a skip runs ahead to.
     void roundPause();
+
+    // Whether the next trickPause() or roundPause() waits for Enter, so a
+    // "Press Enter" prompt is shown only when pressing it does what it says.
+    bool trickWaitsForEnter() const;
+    bool roundWaitsForEnter() const;
 };
 
 #endif

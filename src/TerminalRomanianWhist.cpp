@@ -16,6 +16,7 @@
 #include <cstdint>
 #include <optional>
 #include <stdexcept>
+#include <string_view>
 
 using namespace romanian_whist;
 
@@ -309,8 +310,11 @@ void TerminalRomanianWhist::onTrickWon(const GameEngine& engine, Seat winner, un
     refresh(engine);
 
     const bool moreTricks = trickNumber < engine.getCurrentRoundTrickCount();
-    renderer.drawFrame(view, moreTricks ? "Press Enter for the next trick"
-                                        : "Press Enter to see the round result");
+    std::string_view prompt;
+    if(pacer.trickWaitsForEnter())
+        prompt = moreTricks ? "Press Enter for the next trick" : "Press Enter to see the round result";
+
+    renderer.drawFrame(view, prompt);
     pacer.trickPause();
 }
 
@@ -326,6 +330,13 @@ void TerminalRomanianWhist::onRoundScored(const GameEngine& engine)
     view.message.clear();
 
     refresh(engine);
-    renderer.drawFrame(view, "Press Enter to deal the next round");
+    std::string_view prompt;
+    if(pacer.roundWaitsForEnter())
+    {
+        const bool lastRound = view.roundNumber == view.roundCount;
+        prompt = lastRound ? "Press Enter to see the final results" : "Press Enter to deal the next round";
+    }
+
+    renderer.drawFrame(view, prompt);
     pacer.roundPause();
 }

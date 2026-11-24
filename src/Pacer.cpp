@@ -123,31 +123,35 @@ void Pacer::trickPause()
     if(skipRestOfRound)
         return;
 
-    if(!terminal.interactive())
-        return;
-
-    if(options.autoAdvance)
+    if(trickWaitsForEnter())
     {
-        if(sleepOrSkip(options.trickDwell))
-            skipRestOfRound = true;
+        Input::waitForEnter(true);
         return;
     }
 
-    Input::waitForEnter(true);
+    if(sleepOrSkip(options.trickDwell))
+        skipRestOfRound = true;
 }
 
 void Pacer::roundPause()
 {
     // A skip runs to the end of the round and stops here, which is the point:
     // the scoreboard is what it was skipping ahead to.
-    if(!terminal.interactive())
-        return;
-
-    if(options.autoAdvance)
+    if(roundWaitsForEnter())
     {
-        sleepOrSkip(options.trickDwell);
+        Input::waitForEnter(true);
         return;
     }
 
-    Input::waitForEnter(true);
+    sleepOrSkip(options.trickDwell);
+}
+
+bool Pacer::trickWaitsForEnter() const
+{
+    return !skipRestOfRound && roundWaitsForEnter();
+}
+
+bool Pacer::roundWaitsForEnter() const
+{
+    return terminal.interactive() && !options.autoAdvance;
 }

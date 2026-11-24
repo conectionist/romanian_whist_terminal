@@ -218,3 +218,40 @@ TEST_CASE("a short window drops the streak column and the spacing", "[frame]")
     REQUIRE_THAT(compact, !ContainsSubstring("Streak"));
     REQUIRE(lines(compact).size() < lines(full).size());
 }
+
+TEST_CASE("no line of a frame ends in a space", "[frame]")
+{
+    // Redirected output is read as a log, where trailing spaces are noise. The
+    // view fills every row that is padded: the trick, a hand whose last suit is
+    // short, and another seat's visible hand.
+    for(const Phase phase : { Phase::Betting, Phase::Playing, Phase::TrickEnd, Phase::RoundEnd,
+                               Phase::GameOver })
+    {
+        GameView view = fourSeats(phase);
+        view.trickNumber = 1;
+        view.leadSeat = 1;
+        view.hasLeadSuit = true;
+        view.leadSuit = Suit::Hearts;
+        view.table = { { 1, Card(Rank::King, Suit::Hearts), true },
+                       { 2, Card(Rank::Three, Suit::Hearts), false } };
+        view.humanSeat = romanian_whist::Seat{0};
+        view.seats[0].isHuman = true;
+        view.hand = { { Card(Rank::Ace, Suit::Hearts), true, 1 },
+                      { Card(Rank::Five, Suit::Hearts), true, 2 },
+                      { Card(Rank::Seven, Suit::Hearts), true, 3 },
+                      { Card(Rank::Nine, Suit::Clubs), false, 0 } };
+        view.legalCount = 3;
+        view.seats[2].hand = { { Card(Rank::Two, Suit::Spades), false, 0 },
+                               { Card(Rank::Queen, Suit::Diamonds), false, 0 } };
+        view.message = "Bogdan wins the trick.";
+
+        for(const unsigned int height : { FullHeight, CompactHeight })
+        {
+            for(const std::string& line : lines(draw(view, height, "Press Enter")))
+            {
+                INFO("line: '" << line << "'");
+                CHECK((line.empty() || line.back() != ' '));
+            }
+        }
+    }
+}

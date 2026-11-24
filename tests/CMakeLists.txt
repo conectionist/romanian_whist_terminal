@@ -10,6 +10,7 @@ add_executable(terminal_tests
     ConsoleMoveProviderTests.cpp
     FrameTests.cpp
     GameViewTests.cpp
+    PacerTests.cpp
 )
 
 target_link_libraries(terminal_tests PRIVATE
