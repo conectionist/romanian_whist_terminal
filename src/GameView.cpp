@@ -46,11 +46,9 @@ void rebuildTable(GameView& view, const GameEngine& game)
     if(view.hasLeadSuit)
         view.leadSuit = trick.getLeadSuit();
 
-    // The seat the renderer walks the table from. It MUST be whoever led this
-    // trick, and getTrickLeaderSeat() is not that from the moment the trick is
-    // won - it has already moved on to the winner, which is precisely when the
-    // trick-end screen is drawn. The trick's own first entry is the honest
-    // answer, and falls back to the leader only while nothing has been played.
+    // From the trick's first card, not getTrickLeaderSeat(): once the trick is
+    // won that has moved on to the winner, and the trick-end screen is drawn
+    // then. Before anything is played, the two agree.
     view.leadSeat = played.empty() ? game.getTrickLeaderSeat().index
                                    : played.front().seat.index;
 }

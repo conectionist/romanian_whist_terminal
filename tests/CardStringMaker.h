@@ -15,11 +15,9 @@
 // so there is nothing to share short of the engine publishing a test-support
 // target. Duplicating eight lines is the cheaper of the two.
 //
-// It must be VISIBLE in every translation unit that compares Cards: a TU that
-// instantiates the primary template while another explicitly specialises it is
-// ill-formed with no diagnostic required. Include it at the top of every test
-// file. The optional half is handled by CATCH_CONFIG_ENABLE_OPTIONAL_STRINGMAKER,
-// set on the test target in CMakeLists.txt.
+// Include it at the top of every test file: one file that uses the primary
+// template while another specialises it makes the program ill-formed, and no
+// compiler has to say so.
 namespace Catch
 {
 template<>
