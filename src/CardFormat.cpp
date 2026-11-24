@@ -1,6 +1,5 @@
 #include "CardFormat.h"
 
-#include <algorithm>
 #include <optional>
 
 using romanian_whist::Card;
@@ -129,11 +128,4 @@ bool CardFormat::inDisplayOrder(const Card& left, const Card& right, const std::
         return leftSuit < rightSuit;
 
     return static_cast<int>(left.rank) > static_cast<int>(right.rank);
-}
-
-void CardFormat::sortForDisplay(std::vector<Card>& cards, const std::optional<Card>& trump)
-{
-    std::sort(cards.begin(), cards.end(),
-        [&trump](const Card& left, const Card& right)
-        { return inDisplayOrder(left, right, trump); });
 }
