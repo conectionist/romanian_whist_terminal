@@ -62,9 +62,9 @@ struct SeatView
     unsigned int winStreak = 0;
     unsigned int lossStreak = 0;
 
-    // Empty unless the viewer can see this seat's hand, and always empty for the
-    // human's own: theirs goes in GameView::hand, so ConsoleMoveProvider has one
-    // place to write its numbering.
+    // Empty unless the human player can see this seat's hand, and always empty
+    // for their own: theirs goes in GameView::hand, so ConsoleMoveProvider has
+    // one place to write its numbering.
     std::vector<HandEntry> hand;
 };
 

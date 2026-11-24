@@ -15,9 +15,9 @@
 // so there is nothing to share short of the engine publishing a test-support
 // target. Duplicating eight lines is the cheaper of the two.
 //
-// Include it at the top of every test file: one file that uses the primary
-// template while another specialises it makes the program ill-formed, and no
-// compiler has to say so.
+// Include it at the top of every test file that compares Cards: one file that
+// uses the primary template while another specialises it makes the program
+// ill-formed, and no compiler has to say so.
 namespace Catch
 {
 template<>

@@ -20,9 +20,9 @@ using romanian_whist::Suit;
 
 namespace
 {
-// Dealt out of display order on purpose: shown, this hand is A-spades,
-// Q-spades, K-hearts, 7-diamonds, which is hand positions 1, 3, 2, 0. No prefix
-// matches deal order, so a test cannot pass by mixing the two up.
+// Dealt out of display order, so a test can tell a hand position from a place
+// on screen. Shown without a trump, this hand is A-spades, Q-spades, K-hearts,
+// 7-diamonds: hand positions 1, 3, 2, 0.
 const Card DiamondsSeven(Rank::Seven, Suit::Diamonds);   // hand position 0
 const Card SpadesAce(Rank::Ace, Suit::Spades);           // hand position 1
 const Card HeartsKing(Rank::King, Suit::Hearts);         // hand position 2
@@ -119,12 +119,12 @@ TEST_CASE("Only legal cards are numbered, and the rest are still shown", "[hand-
 
 TEST_CASE("A single legal card is still numbered from one", "[hand-layout]")
 {
-    const std::vector<Card> legal{ HeartsKing };
+    const std::vector<Card> legal{ SpadesQueen };
 
     const HandLayout layout = layOutHand(Hand, legal, std::nullopt);
 
-    REQUIRE(layout.choices == std::vector<std::size_t>{ 2 });
-    REQUIRE(layout.entries[2].choice == 1);
+    REQUIRE(layout.choices == std::vector<std::size_t>{ 3 });
+    REQUIRE(layout.entries[1].choice == 1);
 
     requireNumbersLeadBackToTheRightCards(layout, Hand);
 }

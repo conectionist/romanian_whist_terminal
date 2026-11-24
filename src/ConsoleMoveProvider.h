@@ -21,9 +21,8 @@ private:
     // Lays the hand out sorted and grouped, numbering only the cards that can
     // legally be played, and returns what each number maps to.
     //
-    // Returns positions in the hand, not cards, in the order they are numbered
-    // on screen: the number typed indexes the result, and the position found
-    // there is what the engine wants back.
+    // Writes the layout to view.hand and view.legalCount as well as returning
+    // its choices, so bidding calls it just to put the hand on screen.
     //
     // Three orderings meet here and none of them coincide: the hand as the
     // engine holds it, the display order, and the legal subset the numbering

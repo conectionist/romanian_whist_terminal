@@ -367,9 +367,8 @@ void Renderer::appendHand(std::string& out, const GameView& view) const
 
 void Renderer::appendOtherHands(std::string& out, const GameView& view) const
 {
-    // Nothing is chosen from these hands, so they have no hint and no numbers.
-    // They were laid out with no legal cards given, which marks every card
-    // legal, so the legend for cards that cannot be played never shows.
+    // Nothing is chosen from these hands, so they have no hint and no numbers,
+    // and the legend for cards that cannot be played never shows.
     for(const SeatView& seat : view.seats)
     {
         if(seat.isHuman || seat.hand.empty())

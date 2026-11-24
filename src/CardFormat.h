@@ -35,8 +35,8 @@ public:
     // at a glance instead of in the order it happened to be dealt. Trump leads,
     // then the suits alternate colour to keep adjacent groups distinguishable.
     //
-    // The comparator is public as well as the sort because ConsoleMoveProvider
-    // sorts positions in the hand, not cards: the engine wants a hand index back.
+    // The comparator is public because layOutHand() sorts positions in the
+    // hand, not cards: the engine wants a hand index back.
     //
     // No two cards in one hand ever compare equivalent (suit position is
     // injective over suits, and a hand holds no two cards of the same suit and
