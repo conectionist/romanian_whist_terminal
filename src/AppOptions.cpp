@@ -73,14 +73,27 @@ bool localeSupportsUnicode()
 
 constexpr long MaximumDelayMilliseconds = 10000;
 
-// Returns false if the argument is not "--flag=<non-negative integer>".
-bool parseDelayFlag(const char* argument, const char* prefix, long& valueOut)
-{
-    const std::size_t prefixLength = std::strlen(prefix);
-    if(std::strncmp(argument, prefix, prefixLength) != 0)
-        return false;
+constexpr const char* DelayPrefix = "--delay=";
+constexpr const char* SeedPrefix = "--seed=";
+constexpr const char* ReckonerPresetPrefix = "--reckoner-preset=";
 
-    const char* text = argument + prefixLength;
+bool startsWith(const char* argument, const char* prefix)
+{
+    return std::strncmp(argument, prefix, std::strlen(prefix)) == 0;
+}
+
+std::string invalidValueError(const char* flag,
+                              const char* value,
+                              const char* expected,
+                              DisplayText::Encoding encoding)
+{
+    return std::string("Invalid value for ") + flag + ": '" + DisplayText::escaped(value, encoding) +
+           "'\nExpected " + expected + ".";
+}
+
+// Returns false if text is not a non-negative integer.
+bool parseDelayValue(const char* text, long& valueOut)
+{
     if(*text == '\0')
         return false;
 
@@ -99,28 +112,17 @@ bool parseDelayFlag(const char* argument, const char* prefix, long& valueOut)
     return true;
 }
 
-// Returns false if the argument is not "--seed=<integer in 0..2^32-1>".
+// Returns false if text is not an integer in 0..2^32-1.
 //
-// Deliberately not folded into parseDelayFlag: that one clamps a value it
+// Deliberately not folded into parseDelayValue: that one clamps a value it
 // cannot use and this one rejects it, because a seed the caller did not ask for
 // would replay the wrong game silently, which is the one thing the flag exists
 // to rule out.
-bool parseSeedFlag(const char* argument, std::optional<std::uint32_t>& valueOut)
+bool parseSeedValue(const char* text, std::uint32_t& valueOut)
 {
-    constexpr const char* Prefix = "--seed=";
-
-    const std::size_t prefixLength = std::strlen(Prefix);
-    if(std::strncmp(argument, Prefix, prefixLength) != 0)
-        return false;
-
-    const char* text = argument + prefixLength;
-    if(*text == '\0')
-        return false;
-
-    // strtoull wraps a leading sign rather than rejecting it, so "--seed=-1"
-    // would otherwise parse as 2^64-1 and then fail the range check below with
-    // a confusing message instead of being read as the typo it is.
-    if(*text == '-' || *text == '+')
+    // strtoull skips leading spaces and accepts a sign, so " +7" would be read
+    // as 7 and "-0" as 0.
+    if(!std::isdigit(static_cast<unsigned char>(*text)))
         return false;
 
     errno = 0;
@@ -128,7 +130,7 @@ bool parseSeedFlag(const char* argument, std::optional<std::uint32_t>& valueOut)
     char* end = nullptr;
     const unsigned long long parsed = std::strtoull(text, &end, 10);
 
-    if(end == text || *end != '\0' || errno == ERANGE)
+    if(*end != '\0' || errno == ERANGE)
         return false;
 
     if(parsed > std::numeric_limits<std::uint32_t>::max())
@@ -138,20 +140,8 @@ bool parseSeedFlag(const char* argument, std::optional<std::uint32_t>& valueOut)
     return true;
 }
 
-// Returns false and fills errorOut if argument starts with "--reckoner-preset=" but has an invalid value.
-// Returns false with empty errorOut if argument does not start with "--reckoner-preset=".
-bool parseReckonerPresetFlag(const char* argument,
-                             romanian_whist::reckoner::ReckonerPreset& valueOut,
-                             DisplayText::Encoding encoding,
-                             std::string& errorOut)
+bool parseReckonerPresetValue(const char* text, romanian_whist::reckoner::ReckonerPreset& valueOut)
 {
-    constexpr const char* Prefix = "--reckoner-preset=";
-
-    const std::size_t prefixLength = std::strlen(Prefix);
-    if(std::strncmp(argument, Prefix, prefixLength) != 0)
-        return false;
-
-    const char* text = argument + prefixLength;
     std::string lowered(text);
     std::transform(lowered.begin(), lowered.end(), lowered.begin(),
                    [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
@@ -165,11 +155,7 @@ bool parseReckonerPresetFlag(const char* argument,
     else if(lowered == "delta")
         valueOut = romanian_whist::reckoner::ReckonerPreset::Delta;
     else
-    {
-        errorOut = "Invalid value for --reckoner-preset: '" + DisplayText::escaped(text, encoding) +
-                   "'\nExpected 'alpha', 'beta', 'gamma', or 'delta'.";
         return false;
-    }
 
     return true;
 }
@@ -207,16 +193,14 @@ CommandLine AppOptions::fromCommandLine(int argc, char** argv)
     long delayOverride = -1;
     if(const char* delayText = std::getenv("WHIST_DELAY_MS"))
     {
-        std::string flag = std::string("--delay=") + delayText;
         long parsed = 0;
-        if(parseDelayFlag(flag.c_str(), "--delay=", parsed))
+        if(parseDelayValue(delayText, parsed))
             delayOverride = parsed;
     }
 
     for(int i = 1 ; i < argc ; i++)
     {
         const char* argument = argv[i];
-        long parsedDelay = 0;
 
         if(std::strcmp(argument, "--help") == 0 || std::strcmp(argument, "-h") == 0)
             helpRequested = true;
@@ -242,19 +226,40 @@ CommandLine AppOptions::fromCommandLine(int argc, char** argv)
         }
         else if(std::strcmp(argument, "--demo") == 0)
             options.demo = true;
-        else if(parseDelayFlag(argument, "--delay=", parsedDelay))
-            delayOverride = parsedDelay;
-        else if(parseSeedFlag(argument, options.seed))
+        else if(startsWith(argument, DelayPrefix))
         {
-            // parseSeedFlag has already written options.seed.
-        }
-        else if(std::strncmp(argument, "--reckoner-preset=", 18) == 0)
-        {
-            std::string parseError;
-            if(!parseReckonerPresetFlag(argument, options.reckonerPreset, options.encoding, parseError))
+            const char* value = argument + std::strlen(DelayPrefix);
+            long parsedDelay = 0;
+            if(!parseDelayValue(value, parsedDelay))
             {
                 result.action = CommandLine::Action::Error;
-                result.error = parseError;
+                result.error = invalidValueError("--delay", value, "a whole number of milliseconds, 0 or more",
+                                                 options.encoding);
+                return result;
+            }
+            delayOverride = parsedDelay;
+        }
+        else if(startsWith(argument, SeedPrefix))
+        {
+            const char* value = argument + std::strlen(SeedPrefix);
+            std::uint32_t parsedSeed = 0;
+            if(!parseSeedValue(value, parsedSeed))
+            {
+                result.action = CommandLine::Action::Error;
+                result.error = invalidValueError("--seed", value, "a whole number from 0 to 4294967295",
+                                                 options.encoding);
+                return result;
+            }
+            options.seed = parsedSeed;
+        }
+        else if(startsWith(argument, ReckonerPresetPrefix))
+        {
+            const char* value = argument + std::strlen(ReckonerPresetPrefix);
+            if(!parseReckonerPresetValue(value, options.reckonerPreset))
+            {
+                result.action = CommandLine::Action::Error;
+                result.error = invalidValueError("--reckoner-preset", value,
+                                                 "'alpha', 'beta', 'gamma', or 'delta'", options.encoding);
                 return result;
             }
         }

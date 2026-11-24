@@ -3,6 +3,7 @@
 
 #include "AppOptions.h"
 
+#include <chrono>
 #include <cstdlib>
 #include <optional>
 #include <string>
@@ -80,10 +81,13 @@ TEST_CASE("A malformed --seed is rejected rather than replaying the wrong game",
     // would be the one failure the flag exists to rule out.
     SECTION("a negative value")
     {
-        // strtoull wraps a leading sign rather than rejecting it, so without an
-        // explicit check this parses as 2^64-1 and fails a range test with a
-        // confusing message instead of being read as the typo it is.
         REQUIRE(parse({ "--seed=-1" }).action == Action::Error);
+    }
+
+    SECTION("minus zero")
+    {
+        // strtoull reads this as 0, a value in range.
+        REQUIRE(parse({ "--seed=-0" }).action == Action::Error);
     }
 
     SECTION("an explicit plus")
@@ -109,6 +113,103 @@ TEST_CASE("A malformed --seed is rejected rather than replaying the wrong game",
     SECTION("trailing rubbish after a good number")
     {
         REQUIRE(parse({ "--seed=42x" }).action == Action::Error);
+    }
+
+    SECTION("a leading space")
+    {
+        REQUIRE(parse({ "--seed= 7" }).action == Action::Error);
+    }
+
+    SECTION("a sign after a leading space")
+    {
+        // strtoull skips the space before it reads the sign.
+        REQUIRE(parse({ "--seed= +7" }).action == Action::Error);
+        REQUIRE(parse({ "--seed= -0" }).action == Action::Error);
+    }
+}
+
+TEST_CASE("A bad value for a real flag names the flag and what it accepts", "[app-options]")
+{
+    // "Unrecognised option" would send the user to --help, which lists the flag.
+    const auto requireValueError = [](const std::string& argument, const std::string& flag,
+                                      const std::string& expected)
+    {
+        const CommandLine result = parse({ argument });
+
+        REQUIRE(result.action == Action::Error);
+        CHECK_THAT(result.error, Catch::Matchers::ContainsSubstring("Invalid value for " + flag));
+        CHECK_THAT(result.error, Catch::Matchers::ContainsSubstring(expected));
+        CHECK_THAT(result.error, !Catch::Matchers::ContainsSubstring("Unrecognised"));
+    };
+
+    const std::string seedRange = "a whole number from 0 to 4294967295";
+    const std::string delayRange = "a whole number of milliseconds, 0 or more";
+
+    SECTION("a negative seed")
+    {
+        requireValueError("--seed=-1", "--seed", seedRange);
+    }
+
+    SECTION("a seed that is not a number")
+    {
+        requireValueError("--seed=abc", "--seed", seedRange);
+    }
+
+    SECTION("a seed past the top of the range")
+    {
+        requireValueError("--seed=4294967296", "--seed", seedRange);
+    }
+
+    SECTION("an empty seed")
+    {
+        requireValueError("--seed=", "--seed", seedRange);
+    }
+
+    SECTION("a signed seed after a space")
+    {
+        requireValueError("--seed= +7", "--seed", seedRange);
+    }
+
+    SECTION("a delay that is not a number")
+    {
+        requireValueError("--delay=abc", "--delay", delayRange);
+    }
+
+    SECTION("a negative delay")
+    {
+        requireValueError("--delay=-5", "--delay", delayRange);
+    }
+
+    SECTION("an empty delay")
+    {
+        requireValueError("--delay=", "--delay", delayRange);
+    }
+
+    SECTION("the value is quoted back")
+    {
+        CHECK_THAT(parse({ "--seed=abc" }).error, Catch::Matchers::ContainsSubstring("'abc'"));
+    }
+}
+
+TEST_CASE("The delay flag sets the pace", "[app-options]")
+{
+    using std::chrono::milliseconds;
+
+    SECTION("an ordinary value, with a finished trick shown twice as long")
+    {
+        const CommandLine result = parse({ "--delay=250" });
+
+        REQUIRE(result.action == Action::Run);
+        CHECK(result.options.playDelay == milliseconds(250));
+        CHECK(result.options.trickDwell == milliseconds(500));
+    }
+
+    SECTION("a value past the cap is clamped rather than refused")
+    {
+        const CommandLine result = parse({ "--delay=99999" });
+
+        REQUIRE(result.action == Action::Run);
+        CHECK(result.options.playDelay == milliseconds(10000));
     }
 }
 
@@ -191,6 +292,24 @@ TEST_CASE("A bad argument is echoed with its control characters written out", "[
         REQUIRE(result.action == Action::Error);
         CHECK_THAT(result.error, Catch::Matchers::ContainsSubstring("'\\x9B2J'"));
         CHECK(result.error.find('\x9B') == std::string::npos);
+    }
+
+    SECTION("bad seed")
+    {
+        const CommandLine result = parse({ "--seed=\x1B[2J" });
+
+        REQUIRE(result.action == Action::Error);
+        CHECK_THAT(result.error, Catch::Matchers::ContainsSubstring("'\\x1B[2J'"));
+        CHECK(result.error.find('\x1B') == std::string::npos);
+    }
+
+    SECTION("bad delay")
+    {
+        const CommandLine result = parse({ "--delay=\x1B[2J" });
+
+        REQUIRE(result.action == Action::Error);
+        CHECK_THAT(result.error, Catch::Matchers::ContainsSubstring("'\\x1B[2J'"));
+        CHECK(result.error.find('\x1B') == std::string::npos);
     }
 }
 

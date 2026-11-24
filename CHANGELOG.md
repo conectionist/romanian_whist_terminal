@@ -3,6 +3,18 @@
 The version lives in `CMakeLists.txt` and is printed by `--version`, alongside the version of
 the engine this build is linked against.
 
+## 2.5.5
+
+### Fixed
+
+- **A bad value for `--seed` or `--delay` names the flag and what it accepts**
+  ([#46](https://github.com/conectionist/romanian_whist_terminal/issues/46)). `--seed=-1` used to
+  report "Unrecognised option", although `--help` lists the flag. It now says
+  "Invalid value for --seed: '-1'" and expects a whole number from 0 to 4294967295. `--delay`
+  expects a whole number of milliseconds, 0 or more.
+- **A seed must start with a digit.** A seed with a leading space was accepted, and so was a sign
+  after it: `--seed=' +7'` replayed seed 7. Both are now refused, as `--seed=-0` is.
+
 ## 2.5.4
 
 ### Fixed
