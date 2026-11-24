@@ -7,7 +7,6 @@
 
 #include <string>
 #include <optional>
-#include <vector>
 
 // The only place that knows cards are drawn with suit glyphs, that hearts and
 // diamonds are red, and what order a hand reads best in. The engine deliberately
@@ -43,9 +42,6 @@ public:
     // rank), so an unstable std::sort still gives one fixed order.
     static bool inDisplayOrder(const romanian_whist::Card& left,
                                const romanian_whist::Card& right,
-                               const std::optional<romanian_whist::Card>& trump);
-
-    static void sortForDisplay(std::vector<romanian_whist::Card>& cards,
                                const std::optional<romanian_whist::Card>& trump);
 };
 
