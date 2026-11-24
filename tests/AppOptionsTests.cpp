@@ -14,11 +14,9 @@
 // this needs no scaffolding at all - and argv is the level worth testing at,
 // since that is what a user actually types.
 //
-// One trap when adding to this file: a TEST_CASE name must not START with "--".
-// ctest runs each case by passing its name as a single argument, and Catch2
-// parses a leading double dash as one of its own options - so such a test fails
-// with "Unrecognised token" under ctest while passing when run by hand. Name
-// them "The seed flag ..." rather than "--seed ...".
+// A TEST_CASE name must not start with "--": ctest passes the name to Catch2,
+// which reads a leading double dash as one of its own options, so the test
+// fails under ctest but passes when run by hand.
 
 namespace
 {

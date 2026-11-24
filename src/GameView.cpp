@@ -46,11 +46,9 @@ void rebuildTable(GameView& view, const GameEngine& game)
     if(view.hasLeadSuit)
         view.leadSuit = trick.getLeadSuit();
 
-    // The seat the renderer walks the table from. It MUST be whoever led this
-    // trick, and getTrickLeaderSeat() is not that from the moment the trick is
-    // won - it has already moved on to the winner, which is precisely when the
-    // trick-end screen is drawn. The trick's own first entry is the honest
-    // answer, and falls back to the leader only while nothing has been played.
+    // Where the renderer starts the table: the trick's first card, since
+    // getTrickLeaderSeat() moves on to the winner as the trick-end screen is
+    // drawn. Until a card is played, the leader is the right seat.
     view.leadSeat = played.empty() ? game.getTrickLeaderSeat().index
                                    : played.front().seat.index;
 }
@@ -109,12 +107,9 @@ void refreshFromEngine(GameView& view, const GameEngine& game)
         seat.winStreak = player.getConsecutiveWins();
         seat.lossStreak = player.getConsecutiveLosses();
 
-        // Rebuilt every frame, same as the human's own hand below: cleared
-        // first, then populated only for another seat whose hand the human can
-        // currently see (GameEngine::canSeeHand - Forehead rounds, today). Not
-        // a spectator's business either way - "a spectator sees everything"
-        // stays a client policy nothing here implements, so this only runs
-        // once a human is actually seated.
+        // Cleared every frame, because which hands the human can see changes
+        // from round to round. A spectator sees none: showing them every hand
+        // is a policy the client has not taken up.
         seat.hand.clear();
 
         if(view.humanSeat && !seat.isHuman)

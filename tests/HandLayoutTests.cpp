@@ -20,10 +20,9 @@ using romanian_whist::Suit;
 
 namespace
 {
-// Deliberately NOT in display order: spades sort first, then hearts, then
-// clubs, then diamonds, and rank runs high to low inside a suit. So the display
-// order of this hand is A-spades, Q-spades, K-hearts, 7-diamonds - hand
-// positions 1, 3, 2, 0, which share no prefix with deal order.
+// Dealt out of display order, so a test can tell a hand position from a place
+// on screen. Shown without a trump, this hand is A-spades, Q-spades, K-hearts,
+// 7-diamonds: hand positions 1, 3, 2, 0.
 const Card DiamondsSeven(Rank::Seven, Suit::Diamonds);   // hand position 0
 const Card SpadesAce(Rank::Ace, Suit::Spades);           // hand position 1
 const Card HeartsKing(Rank::King, Suit::Hearts);         // hand position 2
@@ -111,8 +110,8 @@ TEST_CASE("Only legal cards are numbered, and the rest are still shown", "[hand-
     REQUIRE(layout.entries[2].choice == 0);
     REQUIRE(layout.entries[3].choice == 0);
 
-    // Two numbers offered, and they point at the two spades in the HAND, whose
-    // positions are 1 and 3 - not 0 and 1 as the display would suggest.
+    // The two numbers point at the two spades in the hand, at positions 1 and
+    // 3, not 0 and 1 as the display order would suggest.
     REQUIRE(layout.choices == std::vector<std::size_t>{ 1, 3 });
 
     requireNumbersLeadBackToTheRightCards(layout, Hand);
@@ -120,12 +119,12 @@ TEST_CASE("Only legal cards are numbered, and the rest are still shown", "[hand-
 
 TEST_CASE("A single legal card is still numbered from one", "[hand-layout]")
 {
-    const std::vector<Card> legal{ HeartsKing };
+    const std::vector<Card> legal{ SpadesQueen };
 
     const HandLayout layout = layOutHand(Hand, legal, std::nullopt);
 
-    REQUIRE(layout.choices == std::vector<std::size_t>{ 2 });
-    REQUIRE(layout.entries[2].choice == 1);
+    REQUIRE(layout.choices == std::vector<std::size_t>{ 3 });
+    REQUIRE(layout.entries[1].choice == 1);
 
     requireNumbersLeadBackToTheRightCards(layout, Hand);
 }

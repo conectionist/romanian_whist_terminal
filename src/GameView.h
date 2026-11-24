@@ -62,12 +62,9 @@ struct SeatView
     unsigned int winStreak = 0;
     unsigned int lossStreak = 0;
 
-    // This seat's hand, laid out for display, when the human viewing this
-    // frame can see it (GameEngine::canSeeHand) - empty otherwise. Empty for
-    // the human's own seat too: that hand goes through the top-level
-    // GameView::hand/legalCount instead, so ConsoleMoveProvider's numbered-
-    // choice machinery has exactly one place to write. Populated for every
-    // OTHER seat whose hand is visible this round - Forehead rounds, today.
+    // Empty unless the human player can see this seat's hand, and always empty
+    // for their own: theirs goes in GameView::hand, so ConsoleMoveProvider has
+    // one place to write its numbering.
     std::vector<HandEntry> hand;
 };
 

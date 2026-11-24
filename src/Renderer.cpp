@@ -367,12 +367,8 @@ void Renderer::appendHand(std::string& out, const GameView& view) const
 
 void Renderer::appendOtherHands(std::string& out, const GameView& view) const
 {
-    // Every OTHER seat whose hand GameView::refreshFromEngine decided is
-    // visible this round (GameEngine::canSeeHand - Forehead rounds, today).
-    // Read-only: nothing here is being chosen, so there is no hint and no
-    // numbering - every entry was laid out with legalCards={}, which already
-    // marks every card legal, so appendHandBlock's illegal-card legend never
-    // fires for these.
+    // Nothing is chosen from these hands, so they have no hint and no numbers,
+    // and the legend for cards that cannot be played never shows.
     for(const SeatView& seat : view.seats)
     {
         if(seat.isHuman || seat.hand.empty())
