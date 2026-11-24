@@ -16,14 +16,15 @@ TEST_CASE("A game without a seed seeds no bot", "[bot-seed]")
 
 TEST_CASE("No bot is seeded with the seed that shuffles the deck", "[bot-seed]")
 {
-    // A bot on the shuffle's seed would draw the numbers that dealt the cards.
     constexpr std::uint32_t Largest = std::numeric_limits<std::uint32_t>::max();
 
     for(const std::uint32_t gameSeed : { 0u, 1u, 42u, Largest - 1, Largest })
     {
         std::set<std::uint32_t> seen = { gameSeed };
 
-        for(std::size_t bot = 0 ; bot < 5 ; bot++)
+        // Six, the most players a game can have: a watched game has no human,
+        // so every seat can be a bot.
+        for(std::size_t bot = 0 ; bot < 6 ; bot++)
         {
             INFO("game seed " << gameSeed << ", bot " << bot);
 
