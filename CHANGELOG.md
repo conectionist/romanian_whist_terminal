@@ -7,12 +7,16 @@ the engine this build is linked against.
 
 ### Fixed
 
-- **Redirected output no longer asks you to press Enter**
-  ([#35](https://github.com/conectionist/romanian_whist_terminal/issues/35)). When the output is
-  not a terminal, the game never waits, but it still printed "Press Enter for the next trick" and
-  the like: 122 times in `--demo --no-animate > log.txt`. These prompts are now left out.
+- **"Press Enter" is shown only when the game waits for it**
+  ([#35](https://github.com/conectionist/romanian_whist_terminal/issues/35)). With the output
+  redirected, or with `--auto` or `--no-animate`, the game never waits after a trick or a round,
+  but it still printed "Press Enter for the next trick" and the like: 122 times in
+  `--demo --no-animate > log.txt`. These prompts are now left out. With `--auto`, pressing Enter
+  as the prompt said skipped to the end of the round rather than to the next trick.
+- **After the last round, the prompt says "Press Enter to see the final results"**, not "to deal
+  the next round".
 - **The title line has no trailing spaces.** "ROMANIAN WHIST" was padded on both sides, so every
-  frame's first line ended in 23 spaces.
+  frame's title line ended in 23 spaces.
 
 ## 2.5.5
 

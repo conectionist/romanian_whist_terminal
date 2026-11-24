@@ -130,9 +130,9 @@ std::string Renderer::roundTypeLabel(RoundType type) const
 
 void Renderer::appendTrimmed(std::string& out, const std::string& line) const
 {
-    // Cells are padded to align the next column, which leaves the last one on a
-    // row padded against nothing. Harmless on screen, but it shows up as stray
-    // whitespace when the output is redirected to a file.
+    // Padding that aligns a column or centres a title leaves spaces at the end
+    // of the line. Harmless on screen, but it shows up as stray whitespace when
+    // the output is redirected to a file.
     const std::size_t end = line.find_last_not_of(' ');
 
     out += end == std::string::npos ? std::string() : line.substr(0, end + 1);
