@@ -85,12 +85,9 @@ reckoner::ReckonerKnobs getReckonerKnobs(AiLevel level, reckoner::ReckonerPreset
     throw std::logic_error("getReckonerKnobs: not a Reckoner level");
 }
 
-// `seed` is unset unless --seed was given. Only RandomCardStrategy reads it -
-// the other three are deterministic already - but it is offset per bot so that
-// two random bots in the same game do not draw the identical stream.
-std::unique_ptr<IStrategy> makeStrategy(AiLevel level,
-                                        const std::optional<std::uint32_t>& seed,
-                                        std::size_t aiIndex)
+// Only RandomCardStrategy reads the seed: the other three are deterministic
+// already.
+std::unique_ptr<IStrategy> makeStrategy(AiLevel level, const std::optional<std::uint32_t>& seed)
 {
     switch(level)
     {
@@ -100,7 +97,7 @@ std::unique_ptr<IStrategy> makeStrategy(AiLevel level,
 
         case AiLevel::Random:
             if(seed)
-                return std::make_unique<RandomCardStrategy>(*seed + static_cast<std::uint32_t>(aiIndex));
+                return std::make_unique<RandomCardStrategy>(*seed);
 
             return std::make_unique<RandomCardStrategy>();
 
@@ -120,6 +117,17 @@ std::unique_ptr<IStrategy> makeStrategy(AiLevel level,
 }
 
 } // namespace
+
+std::optional<std::uint32_t> botSeed(const std::optional<std::uint32_t>& gameSeed, std::size_t botIndex)
+{
+    if(!gameSeed)
+        return std::nullopt;
+
+    // The game seed itself shuffles the deck, so a bot seeded with it would draw
+    // the numbers that dealt the cards. One past the index keeps every bot off
+    // it, and each bot on a stream of its own.
+    return *gameSeed + static_cast<std::uint32_t>(botIndex) + 1u;
+}
 
 TerminalRomanianWhist::TerminalRomanianWhist(AppOptions& _options) : options(_options),
                                                                      terminal(options),
@@ -143,6 +151,8 @@ GameSetup TerminalRomanianWhist::buildSetup(const GameConfig& config)
 
     for(std::size_t i = 0 ; i < config.aiNames.size() ; i++)
     {
+        const std::optional<std::uint32_t> seed = botSeed(options.seed, i);
+
         if(config.aiLevels[i] == AiLevel::Cyborg)
         {
             // Cyborg draws nothing, so --seed replays it without being handed one.
@@ -150,18 +160,15 @@ GameSetup TerminalRomanianWhist::buildSetup(const GameConfig& config)
         }
         else if(isReckoner(config.aiLevels[i]))
         {
-            const auto botSeed = options.seed
-                ? std::optional<std::uint32_t>(*options.seed + static_cast<std::uint32_t>(i))
-                : std::nullopt;
             const auto knobs = getReckonerKnobs(config.aiLevels[i], options.reckonerPreset);
-            setup.seats.push_back(makeReckonerSeat(config.aiNames[i], game, knobs, botSeed));
+            setup.seats.push_back(makeReckonerSeat(config.aiNames[i], game, knobs, seed));
         }
         else
         {
             setup.seats.push_back(
                 SeatSetup{ config.aiNames[i],
                            std::make_unique<AiMoveProvider>(
-                               makeStrategy(config.aiLevels[i], options.seed, i)) });
+                               makeStrategy(config.aiLevels[i], seed)) });
         }
     }
 

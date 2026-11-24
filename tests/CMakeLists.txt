@@ -11,6 +11,7 @@ add_executable(terminal_tests
     FrameTests.cpp
     GameViewTests.cpp
     PacerTests.cpp
+    BotSeedTests.cpp
 )
 
 target_link_libraries(terminal_tests PRIVATE

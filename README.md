@@ -210,10 +210,10 @@ rendering change reviewable as a diff:
 ```
 
 The seed reaches both halves of the randomness: it feeds the engine's deal through
-`GameSetup::shuffleSeed`, and, offset per seat, every bot that draws — each
-`RandomCardStrategy`, and each Reckoner's deal sampler. Seeding only one of the two would still
-wander. The rest, the Cyborg included, draw nothing: given the same deal, they play the same
-game.
+`GameSetup::shuffleSeed`, and, offset per bot so that none draws the numbers that dealt
+the cards, every bot that draws — each `RandomCardStrategy`, and each Reckoner's deal
+sampler. Seeding only one of the two would still wander. The rest, the Cyborg included,
+draw nothing: given the same deal, they play the same game.
 
 ### Drawing
 
